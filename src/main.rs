@@ -2,6 +2,7 @@ extern crate serde_json;
 use std::thread;
 use serde::ser::{Serialize, SerializeStruct, Serializer};
 
+use std::env;
 use std::net::TcpListener;
 use tungstenite::accept;
 
@@ -83,12 +84,20 @@ impl ReceivesTelegrams for TelegramProcessor {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let addr = "127.0.0.1:50051".parse()?;
+    let default_grpc_port = String::from("127.0.0.1:50051");
+    let grpc_port = env::var("GRPC_HOST").unwrap_or(default_grpc_port);
+
+    let default_websock_port = String::from("127.0.0.1:9001");
+    let websocket_port = env::var("DEFAULT_WEBSOCKET_HOST").unwrap_or(default_websock_port);
+
+    //let addr = "127.0.0.1:50051".parse()?;
+    let addr = grpc_port.parse()?;
+
     let list: Arc<Mutex<Vec<Mutex<tungstenite::protocol::WebSocket<std::net::TcpStream>>>>> = Arc::new(Mutex::new(vec![]));
     let list_ref = Arc::clone(&list);
     thread::spawn( move || {
         println!("Opening Websocket Sever ...");
-        let server = TcpListener::bind("127.0.0.1:9001").unwrap();
+        let server = TcpListener::bind(websocket_port).unwrap();
         for stream in server.incoming() {
             let websocket = accept(stream.unwrap()).unwrap();
 
