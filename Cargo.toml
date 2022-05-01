@@ -1,0 +1,24 @@
+[package]
+name = "dvb-api"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+tonic = "0.7"
+prost = "0.10"
+tokio = { version = "1.18", features = ["macros", "rt-multi-thread"] }
+
+tungstenite = "0.17.2"
+
+serde = "*"
+serde_json = "*"
+
+#warp = "0.3.2"
+#websocket = "0.24.0"
+#futures-util = "*"
+
+
+[build-dependencies]
+tonic-build = "0.7"
