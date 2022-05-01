@@ -99,10 +99,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!("Opening Websocket Sever ...");
         let server = TcpListener::bind(websocket_port).unwrap();
         for stream in server.incoming() {
-            let websocket = accept(stream.unwrap()).unwrap();
-
-            let mut unpacked = list_ref.lock().unwrap();
-            unpacked.push(Mutex::new(websocket));
+            match accept(stream.unwrap()) {
+                Ok(websocket) => {
+                    let mut unpacked = list_ref.lock().unwrap();
+                    unpacked.push(Mutex::new(websocket));
+                }
+                Err(_) => {}
+            };
         }
     });
 

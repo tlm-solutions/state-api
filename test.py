@@ -7,4 +7,4 @@ async def hello(uri):
         while True:
             print(await websocket.recv())
 
-asyncio.run(hello("ws://127.0.0.1:9001"))
+asyncio.run(hello("ws://socket.dvb.solutions"))
