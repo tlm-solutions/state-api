@@ -32,6 +32,7 @@ impl Serialize for ReducedTelegram {
         s.serialize_field("destination_number", &self.destination_number)?;
         s.serialize_field("lat", &self.lat)?;
         s.serialize_field("lon", &self.lon)?;
+        s.serialize_field("station_name", &self.station_name)?;
         s.end()
     }
 }
