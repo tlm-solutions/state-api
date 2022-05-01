@@ -1,3 +1,6 @@
+#!/usr/bin/env nix-shell
+#!nix-shell --pure -i python3.9 -p "python39Packes.ghcWithPackages (pkgs: [ pkgs.turtle ])"
+
 import asyncio
 from websockets import connect
 
