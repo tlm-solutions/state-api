@@ -142,7 +142,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let rt = tokio::runtime::Runtime::new().unwrap();
         rt.block_on(HttpServer::new(move || App::new()
                     .app_data(data.clone())
-                    .route("/state_all", web::post().to(get_network))
+                    .route("/state/all", web::post().to(get_network))
                     )
             .bind((http_host, http_port))
             .unwrap()
