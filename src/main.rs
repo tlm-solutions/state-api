@@ -1,17 +1,23 @@
 extern crate serde_json;
-use std::thread;
-use serde::ser::{Serialize, SerializeStruct, Serializer};
 
+mod state;
+mod api;
+
+pub use state::{Network};
+pub use api::{get_network};
+
+use std::thread;
 use std::env;
 use std::net::TcpListener;
-use tungstenite::accept;
+use std::sync::{Arc, Mutex, RwLock};
 
+use serde::ser::{Serialize, SerializeStruct, Serializer};
+use tungstenite::accept;
 use tonic::{transport::Server, Request, Response, Status};
+use actix_web::{web, App, HttpServer };
 
 use dvb_dump::receives_telegrams_server::{ReceivesTelegrams, ReceivesTelegramsServer};
-use dvb_dump::{ReducedTelegram, ReturnCode};
-
-use std::sync::{Arc, Mutex};
+use dvb_dump::{ReturnCode, ReducedTelegram};
 
 pub mod dvb_dump {
     tonic::include_proto!("dvbdump");
@@ -39,16 +45,19 @@ impl Serialize for ReducedTelegram {
     }
 }
 
-//#[derive(Default)]
+#[derive(Clone)]
 pub struct TelegramProcessor {
-    pub connections: Arc<Mutex<Vec<Mutex<tungstenite::protocol::WebSocket<std::net::TcpStream>>>>>
+    pub connections: Arc<Mutex<Vec<Mutex<tungstenite::protocol::WebSocket<std::net::TcpStream>>>>>,
+    pub state: Arc<RwLock<Network>>
 }
 
 impl TelegramProcessor {
-    fn new(list: Arc<Mutex<Vec<Mutex<tungstenite::protocol::WebSocket<std::net::TcpStream>>>>>
+    fn new(list: Arc<Mutex<Vec<Mutex<tungstenite::protocol::WebSocket<std::net::TcpStream>>>>>,
+           state: Arc<RwLock<Network>>
 ) -> TelegramProcessor {
         TelegramProcessor {
-            connections: list
+            connections: list,
+            state: state
         }
     }
 }
@@ -66,11 +75,18 @@ impl ReceivesTelegrams for TelegramProcessor {
 			match client.write_message(tungstenite::Message::text(serde_json::to_string(&extracted).unwrap())) {
                 Ok(_) => {}
                 Err(_) => {
-                    println!("Found dead socket");
                     dead_socket_indices.push(i);
                 }
             };
         }
+
+        // update internal state
+        {
+            let mut data = (*self.state).write().unwrap();
+            data.update(&extracted);
+        }
+
+        // removing dead sockets 
         let mut remove_count = 0;
         for index in dead_socket_indices {
             (&mut*unlocked).remove(index - remove_count);
@@ -92,12 +108,21 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let default_websock_port = String::from("127.0.0.1:9001");
     let websocket_port = env::var("DEFAULT_WEBSOCKET_HOST").unwrap_or(default_websock_port);
+    
+    let default_host = String::from("127.0.0.1");
+    let http_host = env::var("HTTP_HOST").unwrap_or(default_host);
+
+    let default_port = String::from("9002");
+    let http_port = env::var("HTTP_PORT").unwrap_or(default_port).parse::<u16>().unwrap();
 
     //let addr = "127.0.0.1:50051".parse()?;
     let addr = grpc_port.parse()?;
 
     let list: Arc<Mutex<Vec<Mutex<tungstenite::protocol::WebSocket<std::net::TcpStream>>>>> = Arc::new(Mutex::new(vec![]));
     let list_ref = Arc::clone(&list);
+    let state = Arc::new(RwLock::new(Network::new())); //Arc::new(Mutex::new(Network::new()));
+    let state_copy = Arc::clone(&state);
+
     thread::spawn( move || {
         println!("Opening Websocket Sever ...");
         let server = TcpListener::bind(websocket_port).unwrap();
@@ -111,8 +136,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             };
         }
     });
-
-    let telegram_processor = TelegramProcessor::new(list);
+    thread::spawn( move || {
+        println!("Opening Http Sever ...");
+        let data = web::Data::new(state_copy);
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        rt.block_on(HttpServer::new(move || App::new()
+                    .app_data(data.clone())
+                    .route("/state_all", web::post().to(get_network))
+                    )
+            .bind((http_host, http_port))
+            .unwrap()
+            .run()
+        );
+    });
+    let telegram_processor = TelegramProcessor::new(list, state);
     Server::builder()
         .add_service(ReceivesTelegramsServer::new(telegram_processor))
         .serve(addr)
