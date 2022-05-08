@@ -3,7 +3,7 @@ extern crate serde_json;
 mod state;
 mod api;
 
-pub use state::{Network};
+pub use state::{State, Network, Line, Tram};
 pub use api::{get_network};
 
 use std::thread;
@@ -11,10 +11,12 @@ use std::env;
 use std::net::TcpListener;
 use std::sync::{Arc, Mutex, RwLock};
 
-use serde::ser::{Serialize, SerializeStruct, Serializer};
+use actix_cors::Cors;
+use actix_web::{web, App, HttpServer };
+
 use tungstenite::accept;
 use tonic::{transport::Server, Request, Response, Status};
-use actix_web::{web, App, HttpServer };
+use serde::ser::{Serialize, SerializeStruct, Serializer};
 
 use dvb_dump::receives_telegrams_server::{ReceivesTelegrams, ReceivesTelegramsServer};
 use dvb_dump::{ReturnCode, ReducedTelegram};
@@ -48,12 +50,12 @@ impl Serialize for ReducedTelegram {
 #[derive(Clone)]
 pub struct TelegramProcessor {
     pub connections: Arc<Mutex<Vec<Mutex<tungstenite::protocol::WebSocket<std::net::TcpStream>>>>>,
-    pub state: Arc<RwLock<Network>>
+    pub state: Arc<RwLock<State>>
 }
 
 impl TelegramProcessor {
     fn new(list: Arc<Mutex<Vec<Mutex<tungstenite::protocol::WebSocket<std::net::TcpStream>>>>>,
-           state: Arc<RwLock<Network>>
+           state: Arc<RwLock<State>>
 ) -> TelegramProcessor {
         TelegramProcessor {
             connections: list,
@@ -80,12 +82,18 @@ impl ReceivesTelegrams for TelegramProcessor {
             };
         }
 
+        let region = extracted.region_code;
+
         // update internal state
         {
-            let mut data = (*self.state).write().unwrap();
-            data.update(&extracted);
+            let unwrapped_state = &mut (*self.state.write().unwrap());
+            match unwrapped_state.regions.get_mut(&region) {
+                Some(network) => {
+                  network.update(&extracted);
+                }
+                None => {}
+            }
         }
-
         // removing dead sockets 
         let mut remove_count = 0;
         for index in dead_socket_indices {
@@ -120,7 +128,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let list: Arc<Mutex<Vec<Mutex<tungstenite::protocol::WebSocket<std::net::TcpStream>>>>> = Arc::new(Mutex::new(vec![]));
     let list_ref = Arc::clone(&list);
-    let state = Arc::new(RwLock::new(Network::new())); //Arc::new(Mutex::new(Network::new()));
+    let state = Arc::new(RwLock::new(State::new())); //Arc::new(Mutex::new(Network::new()));
     let state_copy = Arc::clone(&state);
 
     thread::spawn( move || {
@@ -140,14 +148,26 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!("Opening Http Sever ...");
         let data = web::Data::new(state_copy);
         let rt = tokio::runtime::Runtime::new().unwrap();
-        rt.block_on(HttpServer::new(move || App::new()
+
+        
+        rt.block_on(HttpServer::new(move || {
+            let cors = Cors::default()
+                .allow_any_header()
+                .allow_any_method()
+                .allow_any_origin();
+
+            App::new()
                     .app_data(data.clone())
-                    .route("/state/all", web::post().to(get_network))
+                    .wrap(cors)
+                    .service(
+                        web::scope("/")
+                            .route("/state/{:region}/all", web::get().to(get_network)),
                     )
+                    //.route("/state/all", web::post().to(get_network))
+            })
             .bind((http_host, http_port))
             .unwrap()
-            .run()
-        );
+            .run());
     });
     let telegram_processor = TelegramProcessor::new(list, state);
     Server::builder()
