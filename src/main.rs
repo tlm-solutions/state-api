@@ -161,7 +161,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     .wrap(cors)
                     .service(
                         web::scope("/")
-                            .route("/state/{:region}/all", web::get().to(get_network)),
+                            .route("/state/{region}/all", web::get().to(get_network)),
                     )
                     //.route("/state/all", web::post().to(get_network))
             })
