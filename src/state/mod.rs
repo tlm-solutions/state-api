@@ -6,7 +6,6 @@ use graph::{Graph};
 
 use std::collections::HashMap;
 use serde::{Serialize};
-use std::time::{SystemTime, UNIX_EPOCH};
 use super::{ReducedTelegram};
 
 #[derive(Serialize, Debug, Clone)]
@@ -80,7 +79,7 @@ impl Network {
             }
         }
 
-        let mut start_time: u64;
+        let mut _start_time: u64;
         let mut remove_index = 0;
         match self.lines.get(&telegram.line) {
             Some(_)=> {
@@ -99,7 +98,6 @@ impl Network {
                         if found_tram.line == new_tram.line && found_tram.run_number == new_tram.run_number { // maybe add destination here
                             previous = Some(found_tram.clone());
                             remove_index = i;
-                            break;
                             break;
                         }
                     }

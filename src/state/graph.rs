@@ -11,7 +11,8 @@ pub struct Graph {
 
 
 impl Graph {
-    pub fn from_file(path: &String) -> Graph {
+    pub fn from_file(_path: &String) -> Graph {
+        //TODO: actually use the fucking file
         let mut file = File::open("../graph.json").unwrap();
         let mut data = String::new();
         file.read_to_string(&mut data).unwrap();
