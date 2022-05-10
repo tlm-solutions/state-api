@@ -38,7 +38,8 @@ impl Network {
         Network {
             lines: HashMap::new(),
             graph: Graph::from_file(&String::from("../graph.json")),
-            positions: HashMap::new()
+            positions: HashMap::new(),
+            edges: HashMap::new()
         }
     }
 
