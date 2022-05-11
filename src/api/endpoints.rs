@@ -16,15 +16,17 @@ pub struct Error{
     error_message: String
 }
 
-
 pub async fn get_network(state: web::Data<Arc<RwLock<State>>>, region: web::Path<String>)-> impl Responder {
     let data = state.read().unwrap();
+    //let unwrapped_region = region.into_inner();
+
+    println!("Received Request with {}", region.as_str());
 
     let region_lookup: HashMap<&str, u32> = HashMap::from([
-        ("dresden", 1),
-        ("chemnitz", 2),
-        ("karlsruhe", 3),
-        ("berlin", 4)
+        ("dresden", 0),
+        ("chemnitz", 1),
+        ("karlsruhe", 2),
+        ("berlin", 3)
     ]);
 
     let region_id;

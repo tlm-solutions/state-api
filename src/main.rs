@@ -101,7 +101,6 @@ impl ReceivesTelegrams for TelegramProcessor {
         let mut dead_socket_indices = Vec::new();
         for (i, socket) in (&*unlocked).iter().enumerate() {
             let mut client = socket.lock().unwrap();
-            let serde_json_struct = serde_json::to_string(&extracted).unwrap();
 
             let stop;
             match self.stops_lookup.get(&region){
@@ -208,7 +207,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let data = web::Data::new(state_copy);
         let rt = tokio::runtime::Runtime::new().unwrap();
 
-        
         rt.block_on(HttpServer::new(move || {
             let cors = Cors::default()
                 .allow_any_header()
@@ -218,11 +216,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             App::new()
                     .app_data(data.clone())
                     .wrap(cors)
-                    .service(
-                        web::scope("/")
-                            .route("/state/{region}/all", web::get().to(get_network)),
-                    )
-                    //.route("/state/all", web::post().to(get_network))
+                    //.service(
+                    //    web::scope("/")
+                    //        .service(web::resource("/state/{region}/all").route(web::get().to(get_network))),
+                    //)
+                    .route("/state/{region}/all", web::get().to(get_network))
             })
             .bind((http_host, http_port))
             .unwrap()
