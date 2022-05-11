@@ -32,7 +32,7 @@ pub mod dvb_dump {
 pub struct Stop {
     lat: f64,
     lon: f64,
-    station_name: String
+    name: String
 }
 
 #[derive(Debug, Serialize)]
@@ -58,9 +58,6 @@ impl Serialize for ReducedTelegram {
         s.serialize_field("line", &self.line)?;
         s.serialize_field("delay", &self.delay)?;
         s.serialize_field("destination_number", &self.destination_number)?;
-        //s.serialize_field("lat", &self.lat)?;
-        //s.serialize_field("lon", &self.lon)?;
-        //s.serialize_field("station_name", &self.station_name)?;
         s.serialize_field("train_length", &self.train_length)?;
         s.serialize_field("run_number", &self.run_number)?;
         s.serialize_field("region_code", &self.region_code)?;
@@ -82,6 +79,8 @@ impl TelegramProcessor {
 
         let default_stops = String::from("../stops.json");
         let stops_file = env::var("STOPS_FILE").unwrap_or(default_stops);
+
+        println!("Reading File: {}", &stops_file);
         let data = fs::read_to_string(stops_file).expect("Unable to read file");
         let res: HashMap<u32, HashMap<u32, Stop>> = serde_json::from_str(&data).expect("Unable to parse");
         TelegramProcessor {
@@ -115,7 +114,7 @@ impl ReceivesTelegrams for TelegramProcessor {
                             stop = Stop {
                                 lat: 0f64,
                                 lon: 0f64,
-                                station_name: String::from("")
+                                name: String::from("")
                             }
                         }
                     }
@@ -124,7 +123,7 @@ impl ReceivesTelegrams for TelegramProcessor {
                     stop = Stop {
                         lat: 0f64,
                         lon: 0f64,
-                        station_name: String::from("")
+                        name: String::from("")
                     }
                 }
             }
