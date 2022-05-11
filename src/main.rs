@@ -10,13 +10,16 @@ use std::thread;
 use std::env;
 use std::net::TcpListener;
 use std::sync::{Arc, Mutex, RwLock};
+use std::fs;
+use std::collections::HashMap;
 
 use actix_cors::Cors;
 use actix_web::{web, App, HttpServer };
 
 use tungstenite::accept;
 use tonic::{transport::Server, Request, Response, Status};
-use serde::ser::{Serialize, SerializeStruct, Serializer};
+use serde::ser::{SerializeStruct, Serializer};
+use serde::{Deserialize, Serialize};
 
 use dvb_dump::receives_telegrams_server::{ReceivesTelegrams, ReceivesTelegramsServer};
 use dvb_dump::{ReturnCode, ReducedTelegram};
@@ -24,6 +27,23 @@ use dvb_dump::{ReturnCode, ReducedTelegram};
 pub mod dvb_dump {
     tonic::include_proto!("dvbdump");
 }
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct Stop {
+    lat: f64,
+    lon: f64,
+    station_name: String
+}
+
+#[derive(Debug, Serialize)]
+pub struct WebSocketTelegram {
+    #[serde(flatten)]
+    reduced: ReducedTelegram,
+
+    #[serde(flatten)]
+    meta_data: Stop
+}
+
 
 impl Serialize for ReducedTelegram {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -38,9 +58,9 @@ impl Serialize for ReducedTelegram {
         s.serialize_field("line", &self.line)?;
         s.serialize_field("delay", &self.delay)?;
         s.serialize_field("destination_number", &self.destination_number)?;
-        s.serialize_field("lat", &self.lat)?;
-        s.serialize_field("lon", &self.lon)?;
-        s.serialize_field("station_name", &self.station_name)?;
+        //s.serialize_field("lat", &self.lat)?;
+        //s.serialize_field("lon", &self.lon)?;
+        //s.serialize_field("station_name", &self.station_name)?;
         s.serialize_field("train_length", &self.train_length)?;
         s.serialize_field("run_number", &self.run_number)?;
         s.serialize_field("region_code", &self.region_code)?;
@@ -51,16 +71,23 @@ impl Serialize for ReducedTelegram {
 #[derive(Clone)]
 pub struct TelegramProcessor {
     pub connections: Arc<Mutex<Vec<Mutex<tungstenite::protocol::WebSocket<std::net::TcpStream>>>>>,
-    pub state: Arc<RwLock<State>>
+    pub state: Arc<RwLock<State>>,
+    pub stops_lookup: HashMap<u32, HashMap<u32, Stop>>
 }
 
 impl TelegramProcessor {
     fn new(list: Arc<Mutex<Vec<Mutex<tungstenite::protocol::WebSocket<std::net::TcpStream>>>>>,
            state: Arc<RwLock<State>>
 ) -> TelegramProcessor {
+
+        let default_stops = String::from("../stops.json");
+        let stops_file = env::var("STOPS_FILE").unwrap_or(default_stops);
+        let data = fs::read_to_string(stops_file).expect("Unable to read file");
+        let res: HashMap<u32, HashMap<u32, Stop>> = serde_json::from_str(&data).expect("Unable to parse");
         TelegramProcessor {
             connections: list,
-            state: state
+            state: state,
+            stops_lookup: res
         }
     }
 }
@@ -71,11 +98,44 @@ impl ReceivesTelegrams for TelegramProcessor {
         let mut unlocked = self.connections.lock().unwrap();
 
         let extracted = request.into_inner().clone();
+        let region = &extracted.region_code;
         let mut dead_socket_indices = Vec::new();
         for (i, socket) in (&*unlocked).iter().enumerate() {
             let mut client = socket.lock().unwrap();
+            let serde_json_struct = serde_json::to_string(&extracted).unwrap();
 
-			match client.write_message(tungstenite::Message::text(serde_json::to_string(&extracted).unwrap())) {
+            let stop;
+            match self.stops_lookup.get(&region){
+                Some(regional_stops) => {
+                    match regional_stops.get(&extracted.position_id){
+                        Some(found_stop) => {
+                            stop = found_stop.clone();
+                        }
+                        None => {
+                            stop = Stop {
+                                lat: 0f64,
+                                lon: 0f64,
+                                station_name: String::from("")
+                            }
+                        }
+                    }
+                }
+                None => {
+                    stop = Stop {
+                        lat: 0f64,
+                        lon: 0f64,
+                        station_name: String::from("")
+                    }
+                }
+            }
+
+            let sock_tele = WebSocketTelegram {
+                reduced: extracted.clone(),
+                meta_data: stop
+            };
+
+            let wstelegram = serde_json::to_string(&sock_tele).unwrap();
+			match client.write_message(tungstenite::Message::text(wstelegram)) {
                 Ok(_) => {}
                 Err(_) => {
                     dead_socket_indices.push(i);
@@ -83,7 +143,6 @@ impl ReceivesTelegrams for TelegramProcessor {
             };
         }
 
-        let region = extracted.region_code;
 
         // update internal state
         {
