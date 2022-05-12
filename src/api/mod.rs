@@ -1,5 +1,5 @@
 
-use super::{State, Line};
+use super::{State, Tram};
 
 
 pub mod endpoints;

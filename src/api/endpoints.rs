@@ -1,5 +1,5 @@
 
-use super::{State, Line};
+use super::{State, Tram};
 
 use actix_web::{web, Responder};
 use std::sync::{RwLock, Arc};
@@ -19,7 +19,7 @@ pub struct Error{
 
 #[derive(Serialize, Deserialize)]
 pub struct EntireNetworkResponse {
-    network: HashMap<u32, Line>,
+    network: HashMap<u32, HashMap<u32, Tram>>,
     time_stamp: u64
 }
 

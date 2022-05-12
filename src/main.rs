@@ -3,7 +3,7 @@ extern crate serde_json;
 mod state;
 mod api;
 
-pub use state::{State, Network, Line, Tram};
+pub use state::{State, Network, Tram};
 pub use api::{get_network};
 
 use std::thread;

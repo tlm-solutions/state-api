@@ -20,15 +20,9 @@ pub struct Tram {
     pub direction: u32
 }
 
-
-#[derive(Deserialize, Serialize, Debug, Clone)]
-pub struct Line {
-    pub trams: HashMap<u32, Tram>
-}
-
 #[derive(Serialize, Debug, Clone)]
 pub struct Network {
-    pub lines: HashMap<u32, Line>,
+    pub lines: HashMap<u32, HashMap<u32, Tram>>,
     pub positions: HashMap<u32, Vec<Tram>>,
     pub edges: HashMap<(u32, u32), u32>,
     pub graph: Graph
@@ -47,7 +41,7 @@ impl Network {
     pub fn query_tram(&self, line: &u32, run_number: &u32) -> Option<u32> {
         match self.lines.get(line) {
             Some(line) => {
-                line.trams.get(run_number).map_or(None, |tram| Some(tram.position_id))
+                line.get(run_number).map_or(None, |tram| Some(tram.position_id))
             },
             None => None
         }
@@ -87,7 +81,7 @@ impl Network {
             Some(_)=> {
                 {
                     let data = self.lines.get_mut(&telegram.line).unwrap();
-                    data.trams.insert(telegram.run_number, new_tram.clone());
+                    data.insert(telegram.run_number, new_tram.clone());
                 }
 
                 let mut previous = None;
@@ -107,7 +101,7 @@ impl Network {
 
                 if previous.is_some() {
                     let unwrapped = previous.unwrap();
-                    let new_time = self.lines.get(&telegram.line).unwrap().trams.get(&telegram.run_number).unwrap().time_stamp;
+                    let new_time = self.lines.get(&telegram.line).unwrap().get(&telegram.run_number).unwrap().time_stamp;
                     let delta = unwrapped.time_stamp - new_time;
                     println!("Tram: Line: {} Run Number: {} followed path: {} -> {} Time: {}", unwrapped.line, unwrapped.run_number, unwrapped.position_id, telegram.position_id, delta);
 
@@ -115,7 +109,7 @@ impl Network {
                 }
             }
             None => {
-                self.lines.insert(telegram.line, Line {trams: HashMap::from([(telegram.run_number, new_tram)])});
+                self.lines.insert(telegram.line, HashMap::from([(telegram.run_number, new_tram)]));
             }
         }
     }
@@ -137,7 +131,6 @@ impl State {
 
         for (key, value) in res {
             regions.insert(key, Network::new(value));
-
         }
 
         State {
