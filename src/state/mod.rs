@@ -7,10 +7,10 @@ use graph::{Graph};
 use std::collections::HashMap;
 use std::env;
 use std::fs;
-use serde::{Serialize};
+use serde::{Deserialize, Serialize};
 use super::{ReducedTelegram};
 
-#[derive(Serialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct Tram {
     pub position_id: u32, // germany wide or local ones
     pub line: u32,
@@ -21,7 +21,7 @@ pub struct Tram {
 }
 
 
-#[derive(Serialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct Line {
     pub trams: HashMap<u32, Tram>
 }
@@ -36,7 +36,7 @@ pub struct Network {
 
 impl Network {
     pub fn new(graph: Graph) -> Network {
-            Network {
+        Network {
             lines: HashMap::new(),
             graph: graph,
             positions: HashMap::new(),

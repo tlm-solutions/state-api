@@ -1,9 +1,10 @@
 
-use super::{State};
+use super::{State, Line};
 
 use actix_web::{web, Responder};
 use std::sync::{RwLock, Arc};
 use std::collections::{HashMap};
+use std::time::{SystemTime, UNIX_EPOCH};
 use serde::{Serialize, Deserialize};
 
 #[derive(Serialize, Deserialize)]
@@ -14,6 +15,12 @@ pub struct NetworkRequest {
 #[derive(Serialize, Deserialize)]
 pub struct Error{
     error_message: String
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct EntireNetworkResponse {
+    network: HashMap<u32, Line>,
+    time_stamp: u64
 }
 
 pub async fn get_network(state: web::Data<Arc<RwLock<State>>>, region: web::Path<String>)-> impl Responder {
@@ -43,7 +50,16 @@ pub async fn get_network(state: web::Data<Arc<RwLock<State>>>, region: web::Path
 
     match data.regions.get(region_id) {
         Some(region) => {
-            web::Json(Ok(region.lines.clone()))
+            let start = SystemTime::now();
+            let since_the_epoch = start
+                .duration_since(UNIX_EPOCH)
+                .expect("Time went backwards")
+                .as_secs();
+
+            web::Json(Ok(EntireNetworkResponse{ 
+                network: region.lines.clone(),
+                time_stamp: since_the_epoch
+            }))
         }
         None => {
             web::Json(Err(Error {
@@ -52,3 +68,4 @@ pub async fn get_network(state: web::Data<Arc<RwLock<State>>>, region: web::Path
         }
     }
 }
+
