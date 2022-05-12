@@ -5,6 +5,8 @@ mod graph;
 use graph::{Graph};
 
 use std::collections::HashMap;
+use std::env;
+use std::fs;
 use serde::{Serialize};
 use super::{ReducedTelegram};
 
@@ -33,10 +35,10 @@ pub struct Network {
 }
 
 impl Network {
-    pub fn new() -> Network {
-        Network {
+    pub fn new(graph: Graph) -> Network {
+            Network {
             lines: HashMap::new(),
-            graph: Graph::from_file(&String::from("../graph.json")),
+            graph: graph,
             positions: HashMap::new(),
             edges: HashMap::new()
         }
@@ -126,8 +128,20 @@ pub struct State {
 
 impl State {
     pub fn new() -> State {
+        let default_graph_file = String::from("graph.json");
+        let graph_file = env::var("GRAPH_FILE").unwrap_or(default_graph_file);
+
+        let data = fs::read_to_string(graph_file).expect("Unable to read file");
+        let res: HashMap<u32, Graph> = serde_json::from_str(&data).unwrap();
+        let mut regions = HashMap::new();
+
+        for (key, value) in res {
+            regions.insert(key, Network::new(value));
+
+        }
+
         State {
-            regions: HashMap::new()
+            regions: regions
         }
     }
 }

@@ -1,19 +1,20 @@
 use std::collections::HashMap;
 use std::fs::{File};
 use std::io::Read;
-use serde::{Serialize};
+use std::env;
+use serde::{Serialize, Deserialize};
 
 
-#[derive(Serialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct Graph {
     pub structure: HashMap<u32, HashMap<u32, u32>>
 }
 
 
 impl Graph {
-    pub fn from_file(_path: &String) -> Graph {
-        //TODO: actually use the fucking file
-        let mut file = File::open("../graph.json").unwrap();
+    pub fn from_file(path: &String) -> Graph {
+
+        let mut file = File::open(path).unwrap();
         let mut data = String::new();
         file.read_to_string(&mut data).unwrap();
 
