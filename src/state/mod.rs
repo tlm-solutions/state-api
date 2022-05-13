@@ -102,8 +102,8 @@ impl Network {
                 if previous.is_some() {
                     let unwrapped = previous.unwrap();
                     //let new_time = self.lines.get(&telegram.line).unwrap().get(&telegram.run_number).unwrap().time_stamp;
-                    let delta = unwrapped.time_stamp - telegram.time_stamp;
-                    println!("Tram: Line: {} Run Number: {} followed path: {} -> {} Time: {}", unwrapped.line, unwrapped.run_number, unwrapped.position_id, telegram.position_id, delta);
+                    let delta = telegram.time_stamp - unwrapped.time_stamp;
+                    println!("Tram: Line: {} Run Number: {} followed path: {} -- {} -> {} Time: {}", unwrapped.line, unwrapped.run_number, unwrapped.position_id, unwrapped.direction, telegram.position_id, delta);
 
                     self.positions.get_mut(&unwrapped.position_id).unwrap().remove(remove_index);
                     self.edges.insert((unwrapped.position_id, unwrapped.direction), delta as u32);
