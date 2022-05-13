@@ -4,7 +4,7 @@ mod state;
 mod api;
 
 pub use state::{State, Network, Tram};
-pub use api::{get_network};
+pub use api::{get_network, coordinates, query_vehicle, expected_time};
 
 use std::thread;
 use std::env;
@@ -220,7 +220,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     //    web::scope("/")
                     //        .service(web::resource("/state/{region}/all").route(web::get().to(get_network))),
                     //)
-                    .route("/state/{region}/all", web::get().to(get_network))
+                    .route("/vehicles/{region}/all", web::get().to(get_network))
+                    .route("/vehicles/{region}/query", web::post().to(query_vehicle))
+                    .route("/network/{region}/estimated_travel_time", web::post().to(expected_time))
+                    .route("/static/{region}/coordinates", web::post().to(coordinates))
             })
             .bind((http_host, http_port))
             .unwrap()
