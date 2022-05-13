@@ -157,7 +157,7 @@ pub async fn expected_time(state: web::Data<Arc<RwLock<State>>>, region: web::Pa
                     HttpResponse::Ok()
                         .insert_header(header::ContentType::json())
                         .json( RequiredTime { 
-                            required_time: *time_found,
+                            historical_time: *time_found,
                             destination: *destination
                         })
                 }
