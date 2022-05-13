@@ -41,7 +41,7 @@ pub struct RequestVehicleInformation {
 
 #[derive(Serialize, Deserialize)]
 pub struct RequiredTime {
-    required_time: u32,
+    historical_time: u32,
     destination: u32
 }
 

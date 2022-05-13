@@ -13,12 +13,6 @@ pub struct CoordinatesStation {
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct Coordinates {
-    pub lat: f64,
-    pub lon: f64
-}
-
-#[derive(Serialize, Deserialize)]
 pub struct Error{
     error_message: String
 }
