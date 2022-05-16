@@ -10,4 +10,4 @@ async def hello(uri):
         while True:
             print(await websocket.recv())
 
-asyncio.run(hello("ws://socket.dvb.solutions"))
+asyncio.run(hello("ws://httsp://socket.dvb.solutions"))

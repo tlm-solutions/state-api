@@ -87,6 +87,12 @@ pub async fn get_network(state: web::Data<Arc<RwLock<State>>>, region: web::Path
                 .expect("Time went backwards")
                 .as_secs();
 
+            let mut region_copy = region.lines.clone();
+
+            for (_, runs) in region_copy.iter_mut() {
+                runs.retain(|_, v| since_the_epoch - v.time_stamp < 300);
+            }
+
             HttpResponse::Ok()
                 .insert_header(header::ContentType::json())
                 .json(EntireNetworkResponse{ 
