@@ -7,7 +7,8 @@ from websockets import connect
 
 config = {
     "regions": [0],
-    "lines": [1, 2 ,3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]
+    "lines": [1, 2 ,3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
+    "junctions": []
 }
 
 raw_config = json.dumps(config);
@@ -18,4 +19,4 @@ async def hello(uri):
         while True:
             print(await websocket.recv())
 
-asyncio.run(hello("wss://socket.dvb.solutions"))
+asyncio.run(hello("wss://socket.staging.dvb.solutions"))
