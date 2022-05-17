@@ -31,7 +31,7 @@ pub struct Stop {
 }
 
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 struct Filter {
     regions: Vec<u32>,
     junctions: Vec<u32>,
@@ -56,6 +56,7 @@ impl UserConnection {
     pub fn update(&mut self) { 
         match self.socket.read_message() {
             Ok(message) => {
+                println!("Received Message over Websocket from Client {:?}", message);
                 if !message.is_text() {
                     return
                 }
@@ -63,6 +64,7 @@ impl UserConnection {
                 match message {
                     tungstenite::protocol::Message::Text(raw_message) => {
                         self.filter = serde_json::from_str(&raw_message).ok();
+                        println!("Filter Found {:?}", self.filter);
                     }
                     _ => {}
                 }
