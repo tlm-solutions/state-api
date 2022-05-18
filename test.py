@@ -6,9 +6,7 @@ import json
 from websockets import connect
 
 config = {
-    "regions": [0],
-    "lines": [1, 2 ,3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
-    "junctions": []
+    "regions": [0, 1],
 }
 
 raw_config = json.dumps(config);

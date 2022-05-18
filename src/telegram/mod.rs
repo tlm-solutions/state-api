@@ -1,14 +1,14 @@
-use serde::{Serialize};
 use serde::ser::{SerializeStruct, Serializer};
+use serde::Serialize;
 
 pub use dvb_dump::receives_telegrams_server::{ReceivesTelegrams, ReceivesTelegramsServer};
-pub use dvb_dump::{ReturnCode, ReducedTelegram};
+pub use dvb_dump::{ReducedTelegram, ReturnCode};
 
 pub mod dvb_dump {
     tonic::include_proto!("dvbdump");
 }
 
-use super::{Stop};
+use super::Stop;
 
 #[derive(Debug, Serialize)]
 pub struct WebSocketTelegram {
@@ -16,9 +16,8 @@ pub struct WebSocketTelegram {
     pub reduced: ReducedTelegram,
 
     #[serde(flatten)]
-    pub meta_data: Stop
+    pub meta_data: Stop,
 }
-
 
 impl Serialize for ReducedTelegram {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -39,4 +38,3 @@ impl Serialize for ReducedTelegram {
         s.end()
     }
 }
-

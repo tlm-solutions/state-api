@@ -1,48 +1,47 @@
-
 mod r#static;
 
-pub use r#static::{coordinates};
+pub use r#static::coordinates;
 
-use super::{State, Tram, Stop};
+use super::{State, Stop, Tram};
 
-use actix_web::{web, Responder, HttpResponse, http::header};
-use std::sync::{RwLock, Arc};
-use std::collections::{HashMap};
+use actix_web::{http::header, web, HttpResponse, Responder};
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use std::sync::{Arc, RwLock};
 use std::time::{SystemTime, UNIX_EPOCH};
-use serde::{Serialize, Deserialize};
 
 #[derive(Serialize, Deserialize)]
 pub struct NetworkRequest {
-    region: String
+    region: String,
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct Error{
-    error_message: String
+pub struct Error {
+    error_message: String,
 }
 
 #[derive(Serialize, Deserialize)]
 pub struct EntireNetworkResponse {
     network: HashMap<u32, HashMap<u32, Tram>>,
-    time_stamp: u64
+    time_stamp: u64,
 }
 
 #[derive(Serialize, Deserialize)]
 pub struct RequestInformationTime {
     junction: u32,
-    direction: u32
+    direction: u32,
 }
 
 #[derive(Serialize, Deserialize)]
 pub struct RequestVehicleInformation {
     line: u32,
-    run_number: u32
+    run_number: u32,
 }
 
 #[derive(Serialize, Deserialize)]
 pub struct RequiredTime {
     historical_time: u32,
-    destination: u32
+    destination: u32,
 }
 
 pub async fn name_to_id(name: &String) -> Option<u32> {
@@ -50,27 +49,26 @@ pub async fn name_to_id(name: &String) -> Option<u32> {
         ("dresden", 0),
         ("chemnitz", 1),
         ("karlsruhe", 2),
-        ("berlin", 3)
+        ("berlin", 3),
     ]);
-    
-    match region_lookup.get(name.as_str()){
-        Some(val) => {
-            Some(*val)
-        }
-        None => {
-            None
-        }
+
+    match region_lookup.get(name.as_str()) {
+        Some(val) => Some(*val),
+        None => None,
     }
 }
 
 // GET /vehicles/dresden/all
-pub async fn get_network(state: web::Data<Arc<RwLock<State>>>, region: web::Path<String>)-> impl Responder {
+pub async fn get_network(
+    state: web::Data<Arc<RwLock<State>>>,
+    region: web::Path<String>,
+) -> impl Responder {
     //let unwrapped_region = region.into_inner();
     println!("Received Request with {}", region.as_str());
-    
+
     let region_id;
     match name_to_id(&region).await {
-        Some(region ) => {
+        Some(region) => {
             region_id = region;
         }
         None => {
@@ -95,25 +93,27 @@ pub async fn get_network(state: web::Data<Arc<RwLock<State>>>, region: web::Path
 
             HttpResponse::Ok()
                 .insert_header(header::ContentType::json())
-                .json(EntireNetworkResponse{ 
-                    network: region.lines.clone(),
-                    time_stamp: since_the_epoch
+                .json(EntireNetworkResponse {
+                    network: region_copy,
+                    time_stamp: since_the_epoch,
                 })
         }
-        None => {
-            HttpResponse::BadRequest().finish()
-        }
+        None => HttpResponse::BadRequest().finish(),
     }
 }
 
 // POST /vehicles/dresden/query
-pub async fn query_vehicle(state: web::Data<Arc<RwLock<State>>>, region: web::Path<String>, request: web::Json<RequestVehicleInformation>)-> impl Responder {
+pub async fn query_vehicle(
+    state: web::Data<Arc<RwLock<State>>>,
+    region: web::Path<String>,
+    request: web::Json<RequestVehicleInformation>,
+) -> impl Responder {
     //let unwrapped_region = region.into_inner();
     println!("Received Request with {}", region.as_str());
-    
+
     let region_id;
     match name_to_id(&region).await {
-        Some(region ) => {
+        Some(region) => {
             region_id = region;
         }
         None => {
@@ -124,28 +124,40 @@ pub async fn query_vehicle(state: web::Data<Arc<RwLock<State>>>, region: web::Pa
     let data = state.read().unwrap();
     match data.regions.get(&region_id) {
         Some(region) => {
-            if region.lines.contains_key(&request.line) && region.lines.get(&request.line).unwrap().contains_key(&request.run_number) {
+            if region.lines.contains_key(&request.line)
+                && region
+                    .lines
+                    .get(&request.line)
+                    .unwrap()
+                    .contains_key(&request.run_number)
+            {
                 HttpResponse::Ok()
                     .insert_header(header::ContentType::json())
                     .json(
-                        region.lines.get(&request.line).unwrap().get(&request.run_number).unwrap()
+                        region
+                            .lines
+                            .get(&request.line)
+                            .unwrap()
+                            .get(&request.run_number)
+                            .unwrap(),
                     )
-
             } else {
                 HttpResponse::BadRequest().finish()
             }
-                    }
-        None => {
-            HttpResponse::BadRequest().finish()
         }
+        None => HttpResponse::BadRequest().finish(),
     }
 }
 
 // POST /network/dresden/estimated_travel_time
-pub async fn expected_time(state: web::Data<Arc<RwLock<State>>>, region: web::Path<String>, request: web::Json<RequestInformationTime>)-> impl Responder {
+pub async fn expected_time(
+    state: web::Data<Arc<RwLock<State>>>,
+    region: web::Path<String>,
+    request: web::Json<RequestInformationTime>,
+) -> impl Responder {
     let region_id;
     match name_to_id(&region).await {
-        Some(region ) => {
+        Some(region) => {
             region_id = region;
         }
         None => {
@@ -155,26 +167,24 @@ pub async fn expected_time(state: web::Data<Arc<RwLock<State>>>, region: web::Pa
 
     let data = state.read().unwrap();
     match data.regions.get(&region_id) {
-        Some(region) => {
-            match region.edges.get(&(request.junction, request.direction)) {
-                Some(time_found) => {
-
-                    let destination = region.graph.structure.get(&request.junction).unwrap().get(&request.direction).unwrap();
-                    HttpResponse::Ok()
-                        .insert_header(header::ContentType::json())
-                        .json( RequiredTime { 
-                            historical_time: *time_found,
-                            destination: *destination
-                        })
-                }
-                None => {
-                    HttpResponse::BadRequest().finish()
-                }
-            } 
-        }
-        None => {
-            HttpResponse::BadRequest().finish()
-        }
+        Some(region) => match region.edges.get(&(request.junction, request.direction)) {
+            Some(time_found) => {
+                let destination = region
+                    .graph
+                    .structure
+                    .get(&request.junction)
+                    .unwrap()
+                    .get(&request.direction)
+                    .unwrap();
+                HttpResponse::Ok()
+                    .insert_header(header::ContentType::json())
+                    .json(RequiredTime {
+                        historical_time: *time_found,
+                        destination: *destination,
+                    })
+            }
+            None => HttpResponse::BadRequest().finish(),
+        },
+        None => HttpResponse::BadRequest().finish(),
     }
 }
-

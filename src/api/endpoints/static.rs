@@ -1,29 +1,31 @@
-
-use super::{Stop};
+use super::Stop;
 
 use actix_web::{web, Responder};
-use std::collections::{HashMap};
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::env;
 use std::fs;
-use serde::{Serialize, Deserialize};
 
 #[derive(Serialize, Deserialize)]
 pub struct CoordinatesStation {
-    pub station_id: u32
+    pub station_id: u32,
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct Error{
-    error_message: String
+pub struct Error {
+    error_message: String,
 }
 
 // /static/{region}/coordinates
-pub async fn coordinates(region: web::Path<String>, request: web::Json<CoordinatesStation>)-> impl Responder {
+pub async fn coordinates(
+    region: web::Path<String>,
+    request: web::Json<CoordinatesStation>,
+) -> impl Responder {
     let region_lookup: HashMap<&str, u32> = HashMap::from([
         ("dresden", 0),
         ("chemnitz", 1),
         ("karlsruhe", 2),
-        ("berlin", 3)
+        ("berlin", 3),
     ]);
 
     let region_id;
@@ -32,37 +34,35 @@ pub async fn coordinates(region: web::Path<String>, request: web::Json<Coordinat
 
     println!("Reading File: {}", &stops_file);
     let data = fs::read_to_string(stops_file).expect("Unable to read file");
-    let stops: HashMap<u32, HashMap<u32, Stop>> = serde_json::from_str(&data).expect("Unable to parse");
-    
+    let stops: HashMap<u32, HashMap<u32, Stop>> =
+        serde_json::from_str(&data).expect("Unable to parse");
+
     match region_lookup.get(&*region.as_str()) {
         Some(id) => {
             region_id = id;
         }
         None => {
             return web::Json(Err(Error {
-                error_message: String::from("Invalid Region ID")
+                error_message: String::from("Invalid Region ID"),
             }));
         }
     };
 
     match stops.get(&region_id) {
-        Some(station_look_up) => {
-            match station_look_up.get(&request.station_id) {
-                Some(stop) => {
-                    web::Json(Ok(stop.clone()))
-                }
-                None => {
-                    return web::Json(Err(Error {
-                        error_message: String::from("Station ID not found for region")
-                    }))
-                }
+        Some(station_look_up) => match station_look_up.get(&request.station_id) {
+            Some(stop) => web::Json(Ok(stop.clone())),
+            None => {
+                return web::Json(Err(Error {
+                    error_message: String::from("Station ID not found for region"),
+                }))
             }
-        }
+        },
         None => {
             return web::Json(Err(Error {
-                error_message: String::from("This Server doesn't contain the config for this region")
+                error_message: String::from(
+                    "This Server doesn't contain the config for this region",
+                ),
             }))
         }
     }
 }
-
