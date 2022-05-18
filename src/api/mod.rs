@@ -1,7 +1,5 @@
-
-use super::{State, Tram, Stop};
-
+use super::{State, Stop, Tram};
 
 pub mod endpoints;
 
-pub use endpoints::{get_network, coordinates, query_vehicle, expected_time};
+pub use endpoints::{coordinates, expected_time, get_network, query_vehicle};
