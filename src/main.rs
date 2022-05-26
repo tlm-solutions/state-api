@@ -142,6 +142,7 @@ impl ReceivesTelegrams for TelegramProcessor {
         let extracted = request.into_inner().clone();
         let region = &extracted.region_code;
         let mut dead_socket_indices: Vec<usize> = Vec::new();
+        println!("{:#?}", extracted);
         for (i, socket) in (&mut *unlocked).iter_mut().enumerate() {
             let stop_meta_information =
                 self.stop_meta_data(extracted.position_id, extracted.region_code);
