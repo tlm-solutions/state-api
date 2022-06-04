@@ -24,7 +24,7 @@ impl Serialize for ReducedTelegram {
     where
         S: Serializer,
     {
-        let mut s = serializer.serialize_struct("ReducedTelegram", 7)?;
+        let mut s = serializer.serialize_struct("ReducedTelegram", 11)?;
         s.serialize_field("time_stamp", &self.time_stamp)?;
         s.serialize_field("position_id", &self.position_id)?;
         s.serialize_field("direction", &self.direction)?;
