@@ -119,7 +119,10 @@ impl WriteSocket {
         let wstelegram = serde_json::to_string(&sock_tele).unwrap();
 
         match self.socket.unbounded_send(tungstenite::Message::Text(wstelegram)) {
-            Err(_) => {true}
+            Err(e) => {
+                println!("Err: {:?}", e);
+                true
+            }
             _ => {false}
         }
     }

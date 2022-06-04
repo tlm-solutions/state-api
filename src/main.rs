@@ -92,6 +92,7 @@ impl ReceivesTelegrams for TelegramProcessor {
             for (i, socket) in unwrapped.iter_mut().enumerate() {
                 println!("Trying to send to {}", i);
                 if socket.write(&extracted, &stop_meta_information) {
+                    println!("Dead {}", i);
                     dead_socket_indices.push(i);
                 }
             }
