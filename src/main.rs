@@ -90,9 +90,7 @@ impl ReceivesTelegrams for TelegramProcessor {
         {
             let mut unwrapped = self.connections.lock().unwrap();
             for (i, socket) in unwrapped.iter_mut().enumerate() {
-                //let mut socket = connection_mutex.lock().unwrap();
-
-                //socket.update();
+                println!("Trying to send to {}", i);
                 if socket.write(&extracted, &stop_meta_information) {
                     dead_socket_indices.push(i);
                 }
@@ -146,7 +144,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let state = Arc::new(RwLock::new(State::new())); //Arc::new(Mutex::new(Network::new()));
     let state_copy = Arc::clone(&state);
 
-    tokio::spawn(async move { 
+    tokio::spawn(async move {
         accept_connections(list_ref.clone()).await;
     });
 

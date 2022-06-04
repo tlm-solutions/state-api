@@ -113,6 +113,8 @@ impl WriteSocket {
             meta_data: stop.clone(),
         };
 
+        println!("Dumping Data");
+
         //let wstelegram = tungstenite::Message::text(
         let wstelegram = serde_json::to_string(&sock_tele).unwrap();
 
@@ -120,12 +122,6 @@ impl WriteSocket {
             Err(_) => {true}
             _ => {false}
         }
-        /*Pin::new(&mut self.socket).start_send(tungstenite::Message::Text(wstelegram));
-
-        match Pin::new(&mut self.socket).poll_ready().await {
-            Err(_) => {true}
-            _ => {false}
-        }*/
     }
 }
 
@@ -165,7 +161,7 @@ pub async fn connection_setup(stream: TcpStream, connections: ConnectionPool) {
 
     {
         let mut unpacked = connections.lock().unwrap();
-
+        println!("Pushing back Writesocket");
         unpacked.push(WriteSocket {
                 socket: tx,
                 state: state.clone()
@@ -176,6 +172,7 @@ pub async fn connection_setup(stream: TcpStream, connections: ConnectionPool) {
         state: state.clone()
     };
 
+    println!("Spawning process");
     task::spawn(handle_connection(read_socket));
 }
 
@@ -186,7 +183,8 @@ pub async fn accept_connections(connections: ConnectionPool) {
 
     println!("Opening Websocket Sever ...");
     let server = TcpListener::bind(websocket_port).await.unwrap();
-    while let Ok((stream, _addr)) = server.accept().await {
+    while let Ok((stream, addr)) = server.accept().await {
+        println!("New Socket Connection {}!", addr);
         async_std::task::spawn(connection_setup(stream, connections.clone()));
     }
 }

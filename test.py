@@ -1,5 +1,5 @@
 #!/usr/bin/env nix-shell
-#!nix-shell --pure -i python3.9 -p "python39Packes.ghcWithPackages (pkgs: [ pkgs.turtle ])"
+#!nix-shell -i python3.9 -p "python39.withPackages(ps: with ps; [ websockets ])"
 
 import asyncio
 import json
@@ -16,5 +16,6 @@ async def hello(uri):
         await websocket.send(raw_config)
         while True:
             print(await websocket.recv())
+            await websocket.pong()
 
 asyncio.run(hello("wss://socket.staging.dvb.solutions"))
