@@ -1,5 +1,6 @@
 use serde::{Serialize, Deserialize};
 use futures::{
+    task::Poll,
     channel::mpsc::{unbounded, UnboundedSender}
 };
 use async_std::{
@@ -10,7 +11,7 @@ use std::env;
 use std::sync::{Mutex, Arc};
 use futures_util::{
     StreamExt,
-    stream::{SplitStream},
+    stream::{SplitStream, SplitSink},
 };
 
 use async_tungstenite::{
@@ -20,6 +21,7 @@ use async_tungstenite::{
 };
 use futures::prelude::*;
 use serde::de::{Error};
+use core::pin::Pin;
 
 //use futures_io::{AsyncRead, AsyncWrite};
 
@@ -59,7 +61,8 @@ pub struct ReadSocket {
 }
 
 pub struct WriteSocket {
-    socket: UnboundedSender<Message>,//SplitSink<WebSocketStream<ConnectStream>, tungstenite::Message>, //TcpStream, //SplitStream,
+    //socket: UnboundedSender<Message>,
+    socket: SplitSink<WebSocketStream<ConnectStream>, tungstenite::Message>, //TcpStream, //SplitStream,
     //socket: SplitSink<TcpStream, tungstenite::Message>, //TcpStream, //SplitStream,
     state: ProtectedState
 }
@@ -117,15 +120,41 @@ impl WriteSocket {
 
         //let wstelegram = tungstenite::Message::text(
         let wstelegram = serde_json::to_string(&sock_tele).unwrap();
-
-        match self.socket.unbounded_send(tungstenite::Message::Text(wstelegram)) {
+        match Pin::new(&mut self.socket).start_send(tungstenite::Message::Text(wstelegram)) {
+            Err(e) => {
+                println!("Err: {:?}", e);
+                true
+            }
+            _ => {
+                false
+            }
+        }
+        /*match self.socket.unbounded_send(tungstenite::Message::Text(wstelegram)) {
             Err(e) => {
                 println!("Err: {:?}", e);
                 true
             }
             _ => {false}
-        }
+        }*/
     }
+
+    pub fn flush(&mut self) -> bool {
+        /*match Pin::new(&mut self.socket).poll_flush() {
+            Poll::Ready(result) => {
+                match result {
+                    Err(e) => {
+                        println!("Err: {:?}", e);
+                        true
+                    }
+                    _ => {
+                        false
+                    }
+                }
+            }
+            _ => { false }
+        }*/
+        false
+    } 
 }
 
 
@@ -155,9 +184,9 @@ pub async fn connection_setup(stream: TcpStream, connections: ConnectionPool) {
         .await
         .unwrap();
 
-    let (tx, _) = unbounded();
+    //let (tx, _) = unbounded();
 
-    let (_write, read) = ws_stream.split();
+    let (write, read) = ws_stream.split();
     //println!("[Socket] new connection from {}", &addr);
 
     let state: ProtectedState = Arc::new(Mutex::new(UserState{ dead: false, filter: None })); 
@@ -166,7 +195,7 @@ pub async fn connection_setup(stream: TcpStream, connections: ConnectionPool) {
         let mut unpacked = connections.lock().unwrap();
         println!("Pushing back Writesocket");
         unpacked.push(WriteSocket {
-                socket: tx,
+                socket: write,
                 state: state.clone()
         });
     }

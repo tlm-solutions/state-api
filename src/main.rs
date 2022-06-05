@@ -97,6 +97,10 @@ impl ReceivesTelegrams for TelegramProcessor {
                 }
             }
 
+            for (i, socket) in unwrapped.iter_mut().enumerate() {
+                socket.flush();
+            }
+
             // removing dead sockets
             let mut remove_count = 0;
             for index in dead_socket_indices {
