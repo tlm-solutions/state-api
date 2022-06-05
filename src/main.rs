@@ -86,6 +86,8 @@ impl ReceivesTelegrams for TelegramProcessor {
         let extracted = request.into_inner().clone();
         let region = &extracted.region_code;
         let stop_meta_information = self.stop_meta_data(extracted.position_id, extracted.region_code);
+
+        println!("Sending to all!");
         self.connections.write_all(&extracted, &stop_meta_information).await;
 
         let reply = ReturnCode { status: 0 };

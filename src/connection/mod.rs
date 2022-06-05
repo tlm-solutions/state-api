@@ -78,17 +78,16 @@ pub async fn connection_loop(mut connections: ConnectionPool) {
         // spliting the socket into read and write component
 	    let (mut writer, mut reader) = Framed::new( ws, LinesCodec {} ).split();
 
-        print_type_of(&writer);
-        print_type_of(&reader);
+        //print_type_of(&writer);
+        //print_type_of(&reader);
 
         let state: ProtectedState = Arc::new(Mutex::new(UserState{ dead: false, filter: None })); 
 
-        {
-            connections.push(WriteSocket {
-                    socket: writer,
-                    state: state.clone()
-            });
-        }
+        println!("adding sock");
+        connections.push(WriteSocket {
+                socket: writer,
+                state: state.clone()
+        }).await;
 
         let read_socket = ReadSocket {
             socket: reader,
@@ -122,6 +121,7 @@ impl WriteSocket {
         };
         let serialized = serde_json::to_string(&sock_tele).unwrap();
 
+        println!("Sending Data!");
         match self.socket.send( serialized ).await
 		{
 			Ok(_) => {false}
@@ -159,28 +159,31 @@ impl ConnectionPool {
     }
 
     pub async fn write_all(&self, extracted: &ReducedTelegram, stop_meta_information: &Stop) {
-        let mut results = Vec::new();
+        let mut dead_sockets = Vec::new();
 
         let mut unlocked_self = self.connections.lock().unwrap();
 
         for (i, socket) in unlocked_self.iter_mut().enumerate() {
             println!("Trying to send to {}", i);
-            results.push(block_on(socket.write(&extracted, &stop_meta_information)));
+            if block_on(socket.write(&extracted, &stop_meta_information)) {
+                dead_sockets.push(i);
+            }
         }
 
         // removing dead sockets
         let mut remove_count = 0;
-        for (index, dead) in results.iter().enumerate() {
-            if *dead {
-                unlocked_self.remove(index - remove_count);
-                remove_count += 1;
-            }
+        for index in dead_sockets.iter() {
+            println!("Removing {}", index);
+            unlocked_self.remove(index - remove_count);
+            remove_count += 1;
         }
     }
 
     pub async fn push(&mut self, sock: WriteSocket) {
+        println!("accessing lock");
         let mut unlocked_self = self.connections.lock().unwrap();
         unlocked_self.push(sock);
+        println!("ConnectionPool size: {}", unlocked_self.len());
     }
 }
 
