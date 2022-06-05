@@ -15,7 +15,7 @@ pub use connection::{
     ReadSocket,
     WriteSocket,
     ConnectionPool,
-    accept_connections
+    connection_loop
 };
 
 use std::collections::HashMap;
@@ -85,44 +85,10 @@ impl ReceivesTelegrams for TelegramProcessor {
 
         let extracted = request.into_inner().clone();
         let region = &extracted.region_code;
-        let mut dead_socket_indices: Vec<usize> = Vec::new();
         let stop_meta_information = self.stop_meta_data(extracted.position_id, extracted.region_code);
-        {
-            let mut unwrapped = self.connections.lock().unwrap();
-            for (i, socket) in unwrapped.iter_mut().enumerate() {
-                println!("Trying to send to {}", i);
-                if socket.write(&extracted, &stop_meta_information) {
-                    println!("Dead {}", i);
-                    dead_socket_indices.push(i);
-                }
-            }
-
-            for (i, socket) in unwrapped.iter_mut().enumerate() {
-                socket.flush();
-            }
-
-            // removing dead sockets
-            let mut remove_count = 0;
-            for index in dead_socket_indices {
-                unwrapped.remove(index - remove_count);
-                remove_count += 1;
-            }
-
-        }
-
-        // update internal state
-        {
-            let unwrapped_state = &mut (*self.state.write().unwrap());
-            match unwrapped_state.regions.get_mut(&region) {
-                Some(network) => {
-                    network.update(&extracted);
-                }
-                None => {}
-            }
-        }
+        self.connections.write_all(&extracted, &stop_meta_information).await;
 
         let reply = ReturnCode { status: 0 };
-
         Ok(Response::new(reply))
     }
 }
@@ -144,13 +110,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     //let addr = "127.0.0.1:50051".parse()?;
     let addr = grpc_port.parse()?;
 
-    let list: ConnectionPool = Arc::new(Mutex::new(vec![]));
-    let list_ref = Arc::clone(&list);
+    let list: ConnectionPool = ConnectionPool::new();
+    let list_clone = list.clone();
     let state = Arc::new(RwLock::new(State::new())); //Arc::new(Mutex::new(Network::new()));
     let state_copy = Arc::clone(&state);
 
     tokio::spawn(async move {
-        accept_connections(list_ref.clone()).await;
+        connection_loop(list_clone).await;
     });
 
     thread::spawn(move || {
@@ -181,7 +147,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .run(),
         );
     });
-    let telegram_processor = TelegramProcessor::new(list, state);
+    let telegram_processor = TelegramProcessor::new(list.clone(), state);
     Server::builder()
         .add_service(ReceivesTelegramsServer::new(telegram_processor))
         .serve(addr)

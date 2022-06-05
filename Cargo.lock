@@ -401,12 +401,36 @@ version = "0.17.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a1b71b31561643aa8e7df3effe284fa83ab1a840e52294c5f4bd7bfd8b2becbb"
 dependencies = [
- "async-std",
  "futures-io",
  "futures-util",
  "log",
  "pin-project-lite",
+ "tokio",
  "tungstenite",
+]
+
+[[package]]
+name = "async_io_stream"
+version = "0.3.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b6d7b9decdf35d8908a7e3ef02f64c5e9b1695e230154c0e8de3969142d9b94c"
+dependencies = [
+ "futures",
+ "pharos",
+ "rustc_version",
+]
+
+[[package]]
+name = "asynchronous-codec"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f0de5164e5edbf51c45fb8c2d9664ae1c095cce1b265ecf7569093c0d66ef690"
+dependencies = [
+ "bytes",
+ "futures-sink",
+ "futures-util",
+ "memchr",
+ "pin-project-lite",
 ]
 
 [[package]]
@@ -652,6 +676,41 @@ dependencies = [
 ]
 
 [[package]]
+name = "darling"
+version = "0.10.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0d706e75d87e35569db781a9b5e2416cff1236a47ed380831f959382ccd5f858"
+dependencies = [
+ "darling_core",
+ "darling_macro",
+]
+
+[[package]]
+name = "darling_core"
+version = "0.10.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f0c960ae2da4de88a91b2d920c2a7233b400bc33cb28453a2987822d8392519b"
+dependencies = [
+ "fnv",
+ "ident_case",
+ "proc-macro2",
+ "quote",
+ "strsim",
+ "syn",
+]
+
+[[package]]
+name = "darling_macro"
+version = "0.10.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d9b5a2f4ac4969822c62224815d069952656cadc7084fdca9751e6d959189b72"
+dependencies = [
+ "darling_core",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "derive_more"
 version = "0.99.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -684,16 +743,20 @@ dependencies = [
  "actix-web",
  "async-std",
  "async-tungstenite",
+ "asynchronous-codec",
  "futures",
  "futures-io",
  "futures-util",
+ "futures_ringbuf",
  "prost",
  "serde",
  "serde_json",
  "tokio",
+ "tokio-util",
  "tonic",
  "tonic-build",
  "tungstenite",
+ "ws_stream_tungstenite",
 ]
 
 [[package]]
@@ -871,6 +934,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "futures_ringbuf"
+version = "0.3.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b905098b5519bd63b2a1f9f4615198b0e38a473ce201ffdbd4dea6eb63087ddc"
+dependencies = [
+ "futures",
+ "log",
+ "log-derive",
+ "ringbuf",
+ "rustc_version",
+]
+
+[[package]]
 name = "generic-array"
 version = "0.14.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1020,6 +1096,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "ident_case"
+version = "1.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b9e0384b61958566e926dc50660321d12159025e767c18e043daf26b70104c39"
+
+[[package]]
 name = "idna"
 version = "0.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1145,6 +1227,18 @@ checksum = "6389c490849ff5bc16be905ae24bc913a9c8892e19b2341dbc175e14c341c2b8"
 dependencies = [
  "cfg-if",
  "value-bag",
+]
+
+[[package]]
+name = "log-derive"
+version = "0.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6a42526bb432bcd1b43571d5f163984effa25409a29f1a3242a54d0577d55bcf"
+dependencies = [
+ "darling",
+ "proc-macro2",
+ "quote",
+ "syn",
 ]
 
 [[package]]
@@ -1292,6 +1386,16 @@ checksum = "4a13a2fa9d0b63e5f22328828741e523766fff0ee9e779316902290dff3f824f"
 dependencies = [
  "fixedbitset",
  "indexmap",
+]
+
+[[package]]
+name = "pharos"
+version = "0.5.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e9567389417feee6ce15dd6527a8a1ecac205ef62c2932bcf3d9f6fc5b78b414"
+dependencies = [
+ "futures",
+ "rustc_version",
 ]
 
 [[package]]
@@ -1494,6 +1598,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "ringbuf"
+version = "0.2.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f65af18d50f789e74aaf23bbb3f65dcd22a3cb6e029b5bced149f6bd57c5c2a2"
+dependencies = [
+ "cache-padded",
+]
+
+[[package]]
 name = "rustc_version"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1604,6 +1717,12 @@ dependencies = [
  "libc",
  "winapi",
 ]
+
+[[package]]
+name = "strsim"
+version = "0.9.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6446ced80d6c486436db5c078dde11a9f73d42b57fb273121e160b84f63d894c"
 
 [[package]]
 name = "syn"
@@ -1749,6 +1868,7 @@ checksum = "0edfdeb067411dba2044da6d1cb2df793dd35add7888d73c16e3381ded401764"
 dependencies = [
  "bytes",
  "futures-core",
+ "futures-io",
  "futures-sink",
  "pin-project-lite",
  "tokio",
@@ -2184,6 +2304,25 @@ name = "windows_x86_64_msvc"
 version = "0.36.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c811ca4a8c853ef420abd8592ba53ddbbac90410fab6903b3e79972a631f7680"
+
+[[package]]
+name = "ws_stream_tungstenite"
+version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d7ece1fc9cd67a4e6edc845d350391fe5d115ff716aeec145be927fa2dab44b3"
+dependencies = [
+ "async-tungstenite",
+ "async_io_stream",
+ "bitflags",
+ "futures-core",
+ "futures-io",
+ "futures-sink",
+ "futures-util",
+ "log",
+ "pharos",
+ "rustc_version",
+ "tungstenite",
+]
 
 [[package]]
 name = "zstd"
