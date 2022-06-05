@@ -1,27 +1,20 @@
 // This example explores how to properly close a connection.
 //
-use
-{
-	ws_stream_tungstenite  :: { *                                            } ,
-	futures                :: { TryFutureExt, StreamExt, SinkExt, join, executor::block_on } ,
-	asynchronous_codec     :: { LinesCodec, Framed, FramedRead, FramedWrite                         } ,
-	tokio                  :: { net::{ TcpListener }                         } ,
-	futures                :: { FutureExt, select, future::{ ok, ready }     } ,
-	async_tungstenite      :: { accept_async, tokio::{ TokioAdapter, connect_async } } ,
-	std                    :: { time::Duration, sync::{Arc, Mutex}, env                               } ,
-    serde::{Serialize, Deserialize}
-};
+use super::{ReducedTelegram, Stop, WebSocketTelegram};
 use futures_util::stream::{SplitSink, SplitStream};
 use tokio::net::TcpStream;
-use super::{ReducedTelegram, Stop, WebSocketTelegram};
-
-/*
-block_on( async
-{
-    join!( server(), client() );
-
-});
-*/
+use {
+    async_tungstenite::{accept_async, tokio::TokioAdapter},
+    asynchronous_codec::{Framed, LinesCodec},
+    futures::{executor::block_on, SinkExt, StreamExt},
+    serde::{Deserialize, Serialize},
+    std::{
+        env,
+        sync::{Arc, Mutex},
+    },
+    tokio::net::TcpListener,
+    ws_stream_tungstenite::*,
+};
 
 #[derive(Serialize, Deserialize, Debug)]
 struct Filter {
@@ -43,70 +36,72 @@ impl Filter {
 
 pub struct UserState {
     filter: Option<Filter>,
-    dead: bool
+    dead: bool,
 }
 
 pub type ProtectedState = Arc<Mutex<UserState>>;
 
-pub struct ReadSocket {
-    socket: SplitStream<Framed<WsStream<TokioAdapter<TcpStream>>, LinesCodec>>,
-    state: ProtectedState
-}
-
-pub struct WriteSocket {
-    socket: SplitSink<Framed<WsStream<TokioAdapter<TcpStream>>, LinesCodec>, String>,
-    state: ProtectedState
-}
-
-
-fn print_type_of<T>(_: &T) {
-    println!("{}", std::any::type_name::<T>())
+pub struct Socket {
+    write_socket: SplitSink<Framed<WsStream<TokioAdapter<TcpStream>>, LinesCodec>, String>,
+    read_socket: SplitStream<Framed<WsStream<TokioAdapter<TcpStream>>, LinesCodec>>,
+    state: ProtectedState,
 }
 
 pub async fn connection_loop(mut connections: ConnectionPool) {
     let default_websock_port = String::from("127.0.0.1:9001");
     let websocket_port = env::var("DEFAULT_WEBSOCKET_HOST").unwrap_or(default_websock_port);
- 
-	let server = TcpListener::bind( websocket_port ).await.unwrap();
+
+    let server = TcpListener::bind(websocket_port).await.unwrap();
 
     while let Ok((tcp, addr)) = server.accept().await {
         println!("New Socket Connection {}!", addr);
 
-        let s   = accept_async( TokioAdapter::new(tcp) ).await.expect( "ws handshake" );
-	    let ws  = WsStream::new( s );
+        let s = accept_async(TokioAdapter::new(tcp))
+            .await
+            .expect("ws handshake");
+        let ws = WsStream::new(s);
 
         // spliting the socket into read and write component
-	    let (mut writer, mut reader) = Framed::new( ws, LinesCodec {} ).split();
+        let (writer, reader) = Framed::new(ws, LinesCodec {}).split();
 
-        //print_type_of(&writer);
-        //print_type_of(&reader);
+        let state: ProtectedState = Arc::new(Mutex::new(UserState {
+            dead: false,
+            filter: None,
+        }));
 
-        let state: ProtectedState = Arc::new(Mutex::new(UserState{ dead: false, filter: None })); 
-
-        println!("adding sock");
-        connections.push(WriteSocket {
-                socket: writer,
-                state: state.clone()
-        }).await;
-
-        let read_socket = ReadSocket {
-            socket: reader,
-            state: state.clone()
-        };
-
-        //task::spawn(handle_connection(read_socket));
+        connections
+            .push(Socket {
+                write_socket: writer,
+                read_socket: reader,
+                state: state.clone(),
+            })
+            .await;
     }
 }
 
-impl ReadSocket {
+impl Socket {
     pub async fn read(&mut self) -> bool {
-        //let mut framed = FramedRead::new( self.socket, LinesCodec::new() );
-        //let read = framed.next().await.transpose().expect( "close connection" );
-        false
-    }
-}
+        match self.read_socket.next().await.transpose() {
+            Err(_) => {
+                self.state.lock().unwrap().dead = true;
+                true
+            }
+            Ok(data) => {
+                if data.is_none() {
+                    return false;
+                }
 
-impl WriteSocket {
+                match serde_json::from_str(&data.unwrap()) {
+                    Ok(parsed_struct) => {
+                        println!("Updating Filter!");
+                        self.state.lock().unwrap().filter = Some(parsed_struct);
+                    }
+                    _ => {}
+                }
+                false
+            }
+        }
+    }
     pub async fn write(&mut self, telegram: &ReducedTelegram, stop: &Stop) -> bool {
         {
             let state = self.state.lock().unwrap();
@@ -119,42 +114,43 @@ impl WriteSocket {
             reduced: telegram.clone(),
             meta_data: stop.clone(),
         };
+
         let serialized = serde_json::to_string(&sock_tele).unwrap();
 
-        println!("Sending Data!");
-        match self.socket.send( serialized ).await
-		{
-			Ok(_) => {false}
-			Err(_) => {true}
-		}
+        match self.write_socket.send(serialized).await {
+            Ok(_) => false,
+            Err(_) => {
+                self.state.lock().unwrap().dead = true;
+                true
+            }
+        }
     }
 }
-
 
 impl UserState {
     pub fn new() -> UserState {
         UserState {
             filter: None,
-            dead: false
+            dead: false,
         }
-    } 
+    }
 }
 
 #[derive(Clone)]
 pub struct ConnectionPool {
-    connections: Arc<Mutex<Vec<WriteSocket>>>
+    connections: Arc<Mutex<Vec<Socket>>>,
 }
 
 impl ConnectionPool {
     pub fn new() -> ConnectionPool {
         ConnectionPool {
-            connections: Arc::new(Mutex::new(Vec::new()))
+            connections: Arc::new(Mutex::new(Vec::new())),
         }
     }
 
     pub fn clone(&mut self) -> ConnectionPool {
         ConnectionPool {
-            connections:  Arc::clone(&self.connections)
+            connections: Arc::clone(&self.connections),
         }
     }
 
@@ -164,10 +160,15 @@ impl ConnectionPool {
         let mut unlocked_self = self.connections.lock().unwrap();
 
         for (i, socket) in unlocked_self.iter_mut().enumerate() {
-            println!("Trying to send to {}", i);
             if block_on(socket.write(&extracted, &stop_meta_information)) {
+                println!("write {}", i);
                 dead_sockets.push(i);
+                continue;
             }
+            //if socket.read().await {
+            //    println!("read {}", i);
+            //    dead_sockets.push(i);
+            //}
         }
 
         // removing dead sockets
@@ -179,11 +180,9 @@ impl ConnectionPool {
         }
     }
 
-    pub async fn push(&mut self, sock: WriteSocket) {
-        println!("accessing lock");
+    pub async fn push(&mut self, sock: Socket) {
         let mut unlocked_self = self.connections.lock().unwrap();
         unlocked_self.push(sock);
         println!("ConnectionPool size: {}", unlocked_self.len());
     }
 }
-

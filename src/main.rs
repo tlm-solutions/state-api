@@ -1,27 +1,21 @@
 extern crate serde_json;
 
 mod api;
+mod connection;
 mod state;
 mod telegram;
-mod connection;
 
 pub use api::{coordinates, expected_time, get_network, query_vehicle};
+pub use connection::{connection_loop, ConnectionPool, ProtectedState, Socket };
 pub use state::{Network, State, Tram};
 pub use telegram::{
     ReceivesTelegrams, ReceivesTelegramsServer, ReducedTelegram, ReturnCode, WebSocketTelegram,
-};
-pub use connection::{
-    ProtectedState,
-    ReadSocket,
-    WriteSocket,
-    ConnectionPool,
-    connection_loop
 };
 
 use std::collections::HashMap;
 use std::env;
 use std::fs;
-use std::sync::{Arc, Mutex, RwLock};
+use std::sync::{Arc, RwLock};
 use std::thread;
 
 use actix_cors::Cors;
@@ -80,15 +74,29 @@ impl TelegramProcessor {
 
 #[tonic::async_trait]
 impl ReceivesTelegrams for TelegramProcessor {
-    async fn receive_new(&self, request: Request<ReducedTelegram>) -> Result<Response<ReturnCode>, Status> {
+    async fn receive_new(
+        &self,
+        request: Request<ReducedTelegram>,
+    ) -> Result<Response<ReturnCode>, Status> {
         //let mut unlocked = self.connections.lock().unwrap();
 
         let extracted = request.into_inner().clone();
-        let region = &extracted.region_code;
-        let stop_meta_information = self.stop_meta_data(extracted.position_id, extracted.region_code);
+        let stop_meta_information =
+            self.stop_meta_data(extracted.position_id, extracted.region_code);
 
-        println!("Sending to all!");
-        self.connections.write_all(&extracted, &stop_meta_information).await;
+        self.connections
+            .write_all(&extracted, &stop_meta_information)
+            .await;
+
+        {
+            let unwrapped_state = &mut (*self.state.write().unwrap());
+            match unwrapped_state.regions.get_mut(&extracted.region_code) {
+                Some(network) => {
+                    network.update(&extracted);
+                }
+                None => {}
+            }
+        }
 
         let reply = ReturnCode { status: 0 };
         Ok(Response::new(reply))
@@ -100,7 +108,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let default_grpc_port = String::from("127.0.0.1:50051");
     let grpc_port = env::var("GRPC_HOST").unwrap_or(default_grpc_port);
 
-       let default_host = String::from("127.0.0.1");
+    let default_host = String::from("127.0.0.1");
     let http_host = env::var("HTTP_HOST").unwrap_or(default_host);
 
     let default_port = String::from("9002");
@@ -109,12 +117,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .parse::<u16>()
         .unwrap();
 
-    //let addr = "127.0.0.1:50051".parse()?;
     let addr = grpc_port.parse()?;
 
     let list: ConnectionPool = ConnectionPool::new();
     let list_clone = list.clone();
-    let state = Arc::new(RwLock::new(State::new())); //Arc::new(Mutex::new(Network::new()));
+    let state = Arc::new(RwLock::new(State::new()));
     let state_copy = Arc::clone(&state);
 
     tokio::spawn(async move {
@@ -147,7 +154,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .bind((http_host, http_port))
             .unwrap()
             .run(),
-        );
+        )
+        .unwrap();
     });
     let telegram_processor = TelegramProcessor::new(list.clone(), state);
     Server::builder()
