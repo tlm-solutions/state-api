@@ -87,8 +87,13 @@ impl Socket {
                 true
             }
             Ok(data) => {
-                println!("data: {:?}", data);
-                match serde_json::from_str(&data.unwrap()) {
+                if data.is_none() {
+                    return false;
+                }
+
+                let unwrapped_data = data.unwrap();
+                println!("data: {:?}", &unwrapped_data);
+                match serde_json::from_str(&unwrapped_data) {
                     Ok(parsed_struct) => {
                         println!("Updating Filter!");
                         self.state.lock().unwrap().filter = Some(parsed_struct);
