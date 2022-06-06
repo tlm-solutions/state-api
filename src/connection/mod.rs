@@ -164,8 +164,17 @@ impl ConnectionPool {
             }
 
             println!("read {}", i);
-            if block_on(socket.read()) {
-                dead_sockets.push(i);
+            match block_on(tokio::time::timeout(
+                    tokio::time::Duration::from_secs(1),
+                    socket.read())) {
+                Ok(err) => {
+                    if err {
+                        dead_sockets.push(i);
+                    }
+                },
+                Err(_) => {
+                    dead_sockets.push(i);
+                }
             }
         }
 
