@@ -81,13 +81,21 @@ pub async fn connection_loop(mut connections: ConnectionPool) {
 
 impl Socket {
     pub async fn read(&mut self) -> bool {
-        match self.read_socket.next().await.transpose() {
+        let potential_message = tokio::time::timeout(
+            tokio::time::Duration::from_secs(1),
+            self.read_socket.next()).await.transpose();
+        
+        if potential_message.is_none() {
+            return false;
+        }
+
+        match potential_message.unwrap() {
             Err(_) => {
                 self.state.lock().unwrap().dead = true;
                 true
             }
             Ok(data) => {
-                if data.is_none() {
+                if data.is_err() {
                     return false;
                 }
 
@@ -163,7 +171,6 @@ impl ConnectionPool {
 
         for (i, socket) in unlocked_self.iter_mut().enumerate() {
 
-            println!("write {}", i);
             match block_on(tokio::time::timeout(
                     tokio::time::Duration::from_secs(1),
                     socket.write(&extracted, &stop_meta_information))) {
@@ -174,11 +181,11 @@ impl ConnectionPool {
                     }
                 }
                 Err(_) => {
+                    println!("timeout write {}", i);
                     dead_sockets.push(i);
                 }
             }
 
-            println!("read {}", i);
             match block_on(tokio::time::timeout(
                     tokio::time::Duration::from_secs(1),
                     socket.read())) {
@@ -188,6 +195,7 @@ impl ConnectionPool {
                     }
                 },
                 Err(_) => {
+                    println!("timeout read {}", i);
                     dead_sockets.push(i);
                 }
             }

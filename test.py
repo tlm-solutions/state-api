@@ -16,7 +16,7 @@ async def hello(uri):
         await websocket.send(raw_config)
         while True:
             print(await websocket.recv())
-            await websocket.pong()
+            #await websocket.pong()
 
 asyncio.run(hello("wss://socket.staging.dvb.solutions"))
 #asyncio.run(hello("ws://127.0.0.1:9001"))
