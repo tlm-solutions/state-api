@@ -165,10 +165,11 @@ impl ConnectionPool {
                 dead_sockets.push(i);
                 continue;
             }
-            //if socket.read().await {
-            //    println!("read {}", i);
-            //    dead_sockets.push(i);
-            //}
+
+            println!("read {}", i);
+            if block_on(socket.read()) {
+                dead_sockets.push(i);
+            }
         }
 
         // removing dead sockets
