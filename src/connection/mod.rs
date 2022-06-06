@@ -87,10 +87,7 @@ impl Socket {
                 true
             }
             Ok(data) => {
-                if data.is_none() {
-                    return false;
-                }
-
+                println!("data: {:?}", data);
                 match serde_json::from_str(&data.unwrap()) {
                     Ok(parsed_struct) => {
                         println!("Updating Filter!");
