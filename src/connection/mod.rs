@@ -158,7 +158,6 @@ impl ConnectionPool {
         let mut unlocked_self = self.connections.lock().unwrap();
 
         for (i, socket) in unlocked_self.iter_mut().enumerate() {
-            println!("write {}", i);
             match block_on(tokio::time::timeout(
                     tokio::time::Duration::from_secs(1),
                     socket.write(&extracted, &stop_meta_information))) {
