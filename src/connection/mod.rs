@@ -81,24 +81,12 @@ pub async fn connection_loop(mut connections: ConnectionPool) {
 
 impl Socket {
     pub async fn read(&mut self) -> bool {
-        let potential_message = tokio::time::timeout(
-            tokio::time::Duration::from_secs(1),
-            self.read_socket.next()).await.transpose();
-        
-        if potential_message.is_none() {
-            return false;
-        }
-
-        match potential_message.unwrap() {
+        match self.read_socket.next().await.transpose() {
             Err(_) => {
                 self.state.lock().unwrap().dead = true;
                 true
             }
             Ok(data) => {
-                if data.is_err() {
-                    return false;
-                }
-
                 let unwrapped_data = data.unwrap();
                 println!("data: {:?}", &unwrapped_data);
                 match serde_json::from_str(&unwrapped_data) {
@@ -185,7 +173,7 @@ impl ConnectionPool {
                     dead_sockets.push(i);
                 }
             }
-            println!("read {}", i);
+            /*println!("read {}", i);
             match block_on(tokio::time::timeout(
                     tokio::time::Duration::from_secs(1),
                     socket.read())) {
@@ -198,7 +186,7 @@ impl ConnectionPool {
                     println!("timeout read {}", i);
                     dead_sockets.push(i);
                 }
-            }
+            }*/
         }
 
         // removing dead sockets
