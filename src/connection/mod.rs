@@ -1,11 +1,12 @@
 // This example explores how to properly close a connection.
 //
 use super::{ReducedTelegram, Stop, WebSocketTelegram};
+use async_tungstenite::WebSocketStream;
 use futures_util::stream::{SplitSink, SplitStream};
 use tokio::net::TcpStream;
+use tungstenite::Message;
 use {
     async_tungstenite::{accept_async, tokio::TokioAdapter},
-    asynchronous_codec::{Framed, LinesCodec},
     futures::{executor::block_on, SinkExt, StreamExt},
     serde::{Deserialize, Serialize},
     std::{
@@ -13,7 +14,6 @@ use {
         sync::{Arc, Mutex},
     },
     tokio::net::TcpListener,
-    ws_stream_tungstenite::*,
 };
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -42,8 +42,8 @@ pub struct UserState {
 pub type ProtectedState = Arc<Mutex<UserState>>;
 
 pub struct Socket {
-    write_socket: SplitSink<Framed<WsStream<TokioAdapter<TcpStream>>, LinesCodec>, String>,
-    read_socket: SplitStream<Framed<WsStream<TokioAdapter<TcpStream>>, LinesCodec>>,
+    write_socket: SplitSink<WebSocketStream<TokioAdapter<TcpStream>>, Message>,
+    read_socket: SplitStream<WebSocketStream<TokioAdapter<TcpStream>>>,
     state: ProtectedState,
 }
 
@@ -56,13 +56,12 @@ pub async fn connection_loop(mut connections: ConnectionPool) {
     while let Ok((tcp, addr)) = server.accept().await {
         println!("New Socket Connection {}!", addr);
 
-        let s = accept_async(TokioAdapter::new(tcp))
+        let ws = accept_async(TokioAdapter::new(tcp))
             .await
             .expect("ws handshake");
-        let ws = WsStream::new(s);
 
         // spliting the socket into read and write component
-        let (writer, reader) = Framed::new(ws, LinesCodec {}).split();
+        let (writer, reader) = ws.split();
 
         let state: ProtectedState = Arc::new(Mutex::new(UserState {
             dead: false,
@@ -82,14 +81,9 @@ pub async fn connection_loop(mut connections: ConnectionPool) {
 impl Socket {
     pub async fn read(&mut self) -> bool {
         match self.read_socket.next().await.transpose() {
-            Err(_) => {
-                self.state.lock().unwrap().dead = true;
-                true
-            }
-            Ok(data) => {
-                let unwrapped_data = data.unwrap();
-                println!("data: {:?}", &unwrapped_data);
-                match serde_json::from_str(&unwrapped_data) {
+            Ok(Some(Message::Text(data))) => {
+                println!("data: {:?}", &data);
+                match serde_json::from_str(&data) {
                     Ok(parsed_struct) => {
                         println!("Updating Filter!");
                         self.state.lock().unwrap().filter = Some(parsed_struct);
@@ -97,6 +91,10 @@ impl Socket {
                     _ => {}
                 }
                 false
+            }
+            _ => {
+                self.state.lock().unwrap().dead = true;
+                true
             }
         }
     }
@@ -115,7 +113,7 @@ impl Socket {
 
         let serialized = serde_json::to_string(&sock_tele).unwrap();
 
-        match self.write_socket.send(serialized).await {
+        match self.write_socket.send(Message::Text(serialized)).await {
             Ok(_) => false,
             Err(_) => {
                 self.state.lock().unwrap().dead = true;

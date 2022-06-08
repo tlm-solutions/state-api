@@ -410,17 +410,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "async_io_stream"
-version = "0.3.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b6d7b9decdf35d8908a7e3ef02f64c5e9b1695e230154c0e8de3969142d9b94c"
-dependencies = [
- "futures",
- "pharos",
- "rustc_version",
-]
-
-[[package]]
 name = "asynchronous-codec"
 version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -756,7 +745,6 @@ dependencies = [
  "tonic",
  "tonic-build",
  "tungstenite",
- "ws_stream_tungstenite",
 ]
 
 [[package]]
@@ -1386,16 +1374,6 @@ checksum = "4a13a2fa9d0b63e5f22328828741e523766fff0ee9e779316902290dff3f824f"
 dependencies = [
  "fixedbitset",
  "indexmap",
-]
-
-[[package]]
-name = "pharos"
-version = "0.5.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e9567389417feee6ce15dd6527a8a1ecac205ef62c2932bcf3d9f6fc5b78b414"
-dependencies = [
- "futures",
- "rustc_version",
 ]
 
 [[package]]
@@ -2304,25 +2282,6 @@ name = "windows_x86_64_msvc"
 version = "0.36.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c811ca4a8c853ef420abd8592ba53ddbbac90410fab6903b3e79972a631f7680"
-
-[[package]]
-name = "ws_stream_tungstenite"
-version = "0.8.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d7ece1fc9cd67a4e6edc845d350391fe5d115ff716aeec145be927fa2dab44b3"
-dependencies = [
- "async-tungstenite",
- "async_io_stream",
- "bitflags",
- "futures-core",
- "futures-io",
- "futures-sink",
- "futures-util",
- "log",
- "pharos",
- "rustc_version",
- "tungstenite",
-]
 
 [[package]]
 name = "zstd"
