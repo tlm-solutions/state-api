@@ -1,12 +1,10 @@
 extern crate serde_json;
 
 mod api;
-mod connection;
 mod state;
 mod telegram;
 
 pub use api::{coordinates, expected_time, get_network, query_vehicle};
-pub use connection::{connection_loop, ConnectionPool, ProtectedState, Socket };
 pub use state::{Network, State, Tram};
 pub use telegram::{
     ReceivesTelegrams, ReceivesTelegramsServer, ReducedTelegram, ReturnCode, WebSocketTelegram,
@@ -33,13 +31,12 @@ pub struct Stop {
 
 #[derive(Clone)]
 pub struct TelegramProcessor {
-    pub connections: ConnectionPool,
     pub state: Arc<RwLock<State>>,
     pub stops_lookup: HashMap<u32, HashMap<u32, Stop>>,
 }
 
 impl TelegramProcessor {
-    fn new(list: ConnectionPool, state: Arc<RwLock<State>>) -> TelegramProcessor {
+    fn new(state: Arc<RwLock<State>>) -> TelegramProcessor {
         let default_stops = String::from("../stops.json");
         let stops_file = env::var("STOPS_FILE").unwrap_or(default_stops);
 
@@ -48,26 +45,8 @@ impl TelegramProcessor {
         let res: HashMap<u32, HashMap<u32, Stop>> =
             serde_json::from_str(&data).expect("Unable to parse");
         TelegramProcessor {
-            connections: list,
             state: state,
             stops_lookup: res,
-        }
-    }
-
-    fn stop_meta_data(&self, junction: u32, region: u32) -> Stop {
-        match self.stops_lookup.get(&region) {
-            Some(regional_stops) => match regional_stops.get(&junction) {
-                Some(found_stop) => {
-                    return found_stop.clone();
-                }
-                _ => {}
-            },
-            _ => {}
-        }
-        Stop {
-            lat: 0f64,
-            lon: 0f64,
-            name: String::from(""),
         }
     }
 }
@@ -81,13 +60,6 @@ impl ReceivesTelegrams for TelegramProcessor {
         //let mut unlocked = self.connections.lock().unwrap();
 
         let extracted = request.into_inner().clone();
-        let stop_meta_information =
-            self.stop_meta_data(extracted.position_id, extracted.region_code);
-
-        self.connections
-            .write_all(&extracted, &stop_meta_information)
-            .await;
-
         {
             let unwrapped_state = &mut (*self.state.write().unwrap());
             match unwrapped_state.regions.get_mut(&extracted.region_code) {
@@ -119,14 +91,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let addr = grpc_port.parse()?;
 
-    let list: ConnectionPool = ConnectionPool::new();
-    let list_clone = list.clone();
     let state = Arc::new(RwLock::new(State::new()));
     let state_copy = Arc::clone(&state);
-
-    tokio::spawn(async move {
-        connection_loop(list_clone).await;
-    });
 
     thread::spawn(move || {
         println!("Opening Http Sever ...");
@@ -157,7 +123,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         )
         .unwrap();
     });
-    let telegram_processor = TelegramProcessor::new(list.clone(), state);
+    let telegram_processor = TelegramProcessor::new(state);
     Server::builder()
         .add_service(ReceivesTelegramsServer::new(telegram_processor))
         .serve(addr)
