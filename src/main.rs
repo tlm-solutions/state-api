@@ -2,13 +2,17 @@ extern crate serde_json;
 
 mod api;
 mod state;
-mod telegram;
 
 pub use api::{coordinates, expected_time, get_network, query_vehicle};
 pub use state::{Network, State, Tram};
-pub use telegram::{
-    ReceivesTelegrams, ReceivesTelegramsServer, ReducedTelegram, ReturnCode, WebSocketTelegram,
+
+use telegrams::{
+    R09GrpcTelegram,
+    ReturnCode,
+    ReceivesTelegrams,
+    ReceivesTelegramsServer
 };
+use stop_names::Stop;
 
 use std::collections::HashMap;
 use std::env;
@@ -18,16 +22,7 @@ use std::thread;
 
 use actix_cors::Cors;
 use actix_web::{web, App, HttpServer};
-
-use serde::{Deserialize, Serialize};
 use tonic::{transport::Server, Request, Response, Status};
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct Stop {
-    lat: f64,
-    lon: f64,
-    name: String,
-}
 
 #[derive(Clone)]
 pub struct TelegramProcessor {
@@ -53,16 +48,16 @@ impl TelegramProcessor {
 
 #[tonic::async_trait]
 impl ReceivesTelegrams for TelegramProcessor {
-    async fn receive_new(
+    async fn receive_r09(
         &self,
-        request: Request<ReducedTelegram>,
+        request: Request<R09GrpcTelegram>,
     ) -> Result<Response<ReturnCode>, Status> {
         //let mut unlocked = self.connections.lock().unwrap();
 
         let extracted = request.into_inner().clone();
         {
             let unwrapped_state = &mut (*self.state.write().unwrap());
-            match unwrapped_state.regions.get_mut(&extracted.region_code) {
+            match unwrapped_state.regions.get_mut(&extracted.region) {
                 Some(network) => {
                     network.update(&extracted);
                 }

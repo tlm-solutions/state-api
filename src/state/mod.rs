@@ -4,7 +4,7 @@ mod graph;
 
 use graph::Graph;
 
-use super::ReducedTelegram;
+use telegrams::{R09GrpcTelegram};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::env;
@@ -12,7 +12,7 @@ use std::fs;
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct Tram {
-    pub position_id: u32, // germany wide or local ones
+    pub junction: u32, // germany wide or local ones
     pub line: u32,
     pub run_number: u32,
     pub time_stamp: u64,
@@ -42,7 +42,7 @@ impl Network {
         match self.lines.get(line) {
             Some(line) => line
                 .get(run_number)
-                .map_or(None, |tram| Some(tram.position_id)),
+                .map_or(None, |tram| Some(tram.junction)),
             None => None,
         }
     }
@@ -54,37 +54,42 @@ impl Network {
         }
     }
 
-    pub fn update(&mut self, telegram: &ReducedTelegram) {
+    pub fn update(&mut self, telegram: &R09GrpcTelegram) {
+        if telegram.line.is_none() || telegram.run_number.is_none() || telegram.delay.is_none() {
+            return;
+        }
+
         let new_tram = Tram {
-            position_id: telegram.position_id,
-            line: telegram.line,
-            run_number: telegram.run_number,
-            time_stamp: telegram.time_stamp,
-            delayed: telegram.delay,
+            junction: telegram.junction,
+            line: telegram.line.unwrap(),
+            run_number: telegram.run_number.unwrap(),
+            time_stamp: telegram.time,
+            delayed: telegram.delay.unwrap(),
             direction: telegram.direction,
         };
 
-        match self.positions.get_mut(&telegram.position_id) {
+        match self.positions.get_mut(&telegram.junction) {
             Some(trams) => {
                 trams.push(new_tram.clone());
             }
             None => {
                 self.positions
-                    .insert(telegram.position_id, vec![new_tram.clone()]);
+                    .insert(telegram.junction, vec![new_tram.clone()]);
             }
         }
 
         let mut _start_time: u64;
         let mut remove_index = 0;
-        match self.lines.get(&telegram.line) {
+        match self.lines.get(&telegram.line.unwrap()) {
             Some(_) => {
                 {
-                    let data = self.lines.get_mut(&telegram.line).unwrap();
-                    data.insert(telegram.run_number, new_tram.clone());
+                    //TODO the fucking unwrap
+                    let data = self.lines.get_mut(&telegram.line.unwrap()).unwrap();
+                    data.insert(telegram.run_number.unwrap(), new_tram.clone());
                 }
 
                 let mut previous = None;
-                let possible_starts: Vec<u32> = self.graph.adjacent_paths(telegram.position_id);
+                let possible_starts: Vec<u32> = self.graph.adjacent_paths(telegram.junction);
                 for start in possible_starts {
                     // we now look up if there is a tram started from this position
 
@@ -104,29 +109,29 @@ impl Network {
                 if previous.is_some() {
                     let unwrapped = previous.unwrap();
                     //let new_time = self.lines.get(&telegram.line).unwrap().get(&telegram.run_number).unwrap().time_stamp;
-                    let delta = telegram.time_stamp - unwrapped.time_stamp;
+                    let delta = telegram.time - unwrapped.time_stamp;
                     println!(
                         "Tram: Line: {} Run Number: {} followed path: {} -- {} -> {} Time: {}",
                         unwrapped.line,
                         unwrapped.run_number,
-                        unwrapped.position_id,
+                        unwrapped.junction,
                         unwrapped.direction,
-                        telegram.position_id,
+                        telegram.junction,
                         delta
                     );
 
                     self.positions
-                        .get_mut(&unwrapped.position_id)
+                        .get_mut(&unwrapped.junction)
                         .unwrap()
                         .remove(remove_index);
                     self.edges
-                        .insert((unwrapped.position_id, unwrapped.direction), delta as u32);
+                        .insert((unwrapped.junction, unwrapped.direction), delta as u32);
                 }
             }
             None => {
                 self.lines.insert(
-                    telegram.line,
-                    HashMap::from([(telegram.run_number, new_tram)]),
+                    telegram.line.unwrap(),
+                    HashMap::from([(telegram.run_number.unwrap(), new_tram)]),
                 );
             }
         }
@@ -134,7 +139,7 @@ impl Network {
 }
 
 pub struct State {
-    pub regions: HashMap<u32, Network>,
+    pub regions: HashMap<u64, Network>,
 }
 
 impl State {
@@ -143,7 +148,7 @@ impl State {
         let graph_file = env::var("GRAPH_FILE").unwrap_or(default_graph_file);
 
         let data = fs::read_to_string(graph_file).expect("Unable to read file");
-        let res: HashMap<u32, Graph> = serde_json::from_str(&data).unwrap();
+        let res: HashMap<u64, Graph> = serde_json::from_str(&data).unwrap();
         let mut regions = HashMap::new();
 
         for (key, value) in res {

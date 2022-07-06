@@ -2,7 +2,7 @@ mod r#static;
 
 pub use r#static::coordinates;
 
-use super::{State, Stop, Tram};
+use super::{State, Tram};
 
 use actix_web::{http::header, web, HttpResponse, Responder};
 use serde::{Deserialize, Serialize};
@@ -44,8 +44,8 @@ pub struct RequiredTime {
     destination: u32,
 }
 
-pub async fn name_to_id(name: &String) -> Option<u32> {
-    let region_lookup: HashMap<&str, u32> = HashMap::from([
+pub async fn name_to_id(name: &String) -> Option<u64> {
+    let region_lookup: HashMap<&str, u64> = HashMap::from([
         ("dresden", 0),
         ("chemnitz", 1),
         ("karlsruhe", 2),

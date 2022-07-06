@@ -1,4 +1,4 @@
-use super::Stop;
+use stop_names::Stop;
 
 use actix_web::{web, Responder};
 use serde::{Deserialize, Serialize};
@@ -21,6 +21,7 @@ pub async fn coordinates(
     region: web::Path<String>,
     request: web::Json<CoordinatesStation>,
 ) -> impl Responder {
+    // TODO: add the correct mapping
     let region_lookup: HashMap<&str, u32> = HashMap::from([
         ("dresden", 0),
         ("chemnitz", 1),

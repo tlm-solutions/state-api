@@ -1,4 +1,4 @@
-use super::{State, Stop, Tram};
+use super::{State, Tram};
 
 pub mod endpoints;
 
