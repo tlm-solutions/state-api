@@ -31,7 +31,7 @@
       ) // {
       overlays.default = final: prev: {
         inherit (self.packages.${prev.system})
-        dvb-api;
+          dvb-api;
       };
       hydraJobs =
         let
