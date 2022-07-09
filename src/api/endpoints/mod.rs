@@ -66,7 +66,7 @@ pub async fn get_network(
     //let unwrapped_region = region.into_inner();
     println!("Received Request with {}", region.as_str());
 
-    let region_id;
+    /*let region_id;
     match name_to_id(&region).await {
         Some(region) => {
             region_id = region;
@@ -74,10 +74,10 @@ pub async fn get_network(
         None => {
             return HttpResponse::BadRequest().finish();
         }
-    }
+    }*/
 
     let data = state.read().unwrap();
-    match data.regions.get(&region_id) {
+    match data.regions.get(region.as_str()) {
         Some(region) => {
             let start = SystemTime::now();
             let since_the_epoch = start
@@ -111,18 +111,8 @@ pub async fn query_vehicle(
     //let unwrapped_region = region.into_inner();
     println!("Received Request with {}", region.as_str());
 
-    let region_id;
-    match name_to_id(&region).await {
-        Some(region) => {
-            region_id = region;
-        }
-        None => {
-            return HttpResponse::BadRequest().finish();
-        }
-    }
-
     let data = state.read().unwrap();
-    match data.regions.get(&region_id) {
+    match data.regions.get(region.as_str()) {
         Some(region) => {
             if region.lines.contains_key(&request.line)
                 && region
@@ -155,18 +145,9 @@ pub async fn expected_time(
     region: web::Path<String>,
     request: web::Json<RequestInformationTime>,
 ) -> impl Responder {
-    let region_id;
-    match name_to_id(&region).await {
-        Some(region) => {
-            region_id = region;
-        }
-        None => {
-            return HttpResponse::BadRequest().finish();
-        }
-    }
 
     let data = state.read().unwrap();
-    match data.regions.get(&region_id) {
+    match data.regions.get(region.as_str()) {
         Some(region) => match region.edges.get(&(request.junction, request.direction)) {
             Some(time_found) => {
                 let destination = region

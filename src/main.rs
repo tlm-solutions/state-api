@@ -12,7 +12,7 @@ use telegrams::{
     ReceivesTelegrams,
     ReceivesTelegramsServer
 };
-use stop_names::Stop;
+use stop_names::{TransmissionPosition, InterRegional};
 
 use std::collections::HashMap;
 use std::env;
@@ -27,7 +27,6 @@ use tonic::{transport::Server, Request, Response, Status};
 #[derive(Clone)]
 pub struct TelegramProcessor {
     pub state: Arc<RwLock<State>>,
-    pub stops_lookup: HashMap<u32, HashMap<u32, Stop>>,
 }
 
 impl TelegramProcessor {
@@ -36,12 +35,8 @@ impl TelegramProcessor {
         let stops_file = env::var("STOPS_FILE").unwrap_or(default_stops);
 
         println!("Reading File: {}", &stops_file);
-        let data = fs::read_to_string(stops_file).expect("Unable to read file");
-        let res: HashMap<u32, HashMap<u32, Stop>> =
-            serde_json::from_str(&data).expect("Unable to parse");
         TelegramProcessor {
             state: state,
-            stops_lookup: res,
         }
     }
 }
@@ -52,8 +47,6 @@ impl ReceivesTelegrams for TelegramProcessor {
         &self,
         request: Request<R09GrpcTelegram>,
     ) -> Result<Response<ReturnCode>, Status> {
-        //let mut unlocked = self.connections.lock().unwrap();
-
         let extracted = request.into_inner().clone();
         {
             let unwrapped_state = &mut (*self.state.write().unwrap());

@@ -5,6 +5,8 @@ mod graph;
 use graph::Graph;
 
 use telegrams::{R09GrpcTelegram};
+use stop_names::{InterRegional, Region, RegionMetaInformation};
+
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::env;
@@ -139,7 +141,7 @@ impl Network {
 }
 
 pub struct State {
-    pub regions: HashMap<u64, Network>,
+    pub regions: HashMap<String, Network>,
 }
 
 impl State {
@@ -148,7 +150,7 @@ impl State {
         let graph_file = env::var("GRAPH_FILE").unwrap_or(default_graph_file);
 
         let data = fs::read_to_string(graph_file).expect("Unable to read file");
-        let res: HashMap<u64, Graph> = serde_json::from_str(&data).unwrap();
+        let res: HashMap<String, Graph> = serde_json::from_str(&data).unwrap();
         let mut regions = HashMap::new();
 
         for (key, value) in res {

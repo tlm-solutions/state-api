@@ -380,9 +380,9 @@ dependencies = [
 
 [[package]]
 name = "async-task"
-version = "4.2.0"
+version = "4.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "30696a84d817107fc028e049980e09d5e140e8da8f1caeb17e8e950658a3cea9"
+checksum = "7a40729d2133846d9ed0ea60a8b9541bccddab49cd30f0715a1da672fe9a2524"
 
 [[package]]
 name = "async-trait"
@@ -576,6 +576,7 @@ dependencies = [
  "libc",
  "num-integer",
  "num-traits",
+ "serde",
  "time 0.1.44",
  "winapi",
 ]
@@ -720,7 +721,7 @@ checksum = "77c90badedccf4105eca100756a0b1289e191f6fcbdadd3cee1d2f614f97da8f"
 
 [[package]]
 name = "dvb-api"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "actix-cors",
  "actix-multipart",
@@ -1040,9 +1041,9 @@ checksum = "c4a1e36c821dbe04574f602848a19f742f4fb3c98d40449f11bcad18d6b17421"
 
 [[package]]
 name = "hyper"
-version = "0.14.19"
+version = "0.14.20"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "42dc3c131584288d375f2d07f822b0cb012d8c6fb899a5b9fdb3cb7eb9b6004f"
+checksum = "02c929dc5c39e335a03c405292728118860721b10190d98c2a0f0efd5baafbac"
 dependencies = [
  "bytes",
  "futures-channel",
@@ -1731,9 +1732,10 @@ dependencies = [
 
 [[package]]
 name = "stop-names"
-version = "0.1.0"
-source = "git+https://github.com/dump-dvb/stop-names#31e2ddd0f2eb0fe09163a111265a5acfc0fbc2bc"
+version = "0.3.1"
+source = "git+https://github.com/dump-dvb/stop-names#6abf93278e2baf456b44425f211b5bb883ecabd0"
 dependencies = [
+ "chrono",
  "serde",
  "serde_json",
 ]
@@ -1757,8 +1759,8 @@ checksum = "20518fe4a4c9acf048008599e464deb21beeae3d3578418951a189c235a7a9a8"
 
 [[package]]
 name = "telegrams"
-version = "0.1.10"
-source = "git+https://github.com/dump-dvb/telegrams#d3a0c247f4899b05007ca8af3c85b9999474d7c1"
+version = "0.3.1"
+source = "git+https://github.com/dump-dvb/telegrams#c55f4ee5c86a5123e84297208dd1e6d3ed840b72"
 dependencies = [
  "chrono",
  "diesel",

@@ -1,4 +1,4 @@
-use stop_names::Stop;
+use stop_names::TransmissionPosition;
 
 use actix_web::{web, Responder};
 use serde::{Deserialize, Serialize};
@@ -35,7 +35,7 @@ pub async fn coordinates(
 
     println!("Reading File: {}", &stops_file);
     let data = fs::read_to_string(stops_file).expect("Unable to read file");
-    let stops: HashMap<u32, HashMap<u32, Stop>> =
+    let stops: HashMap<u32, HashMap<u32, TransmissionPosition>> =
         serde_json::from_str(&data).expect("Unable to parse");
 
     match region_lookup.get(&*region.as_str()) {
