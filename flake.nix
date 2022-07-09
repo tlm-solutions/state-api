@@ -23,13 +23,16 @@
         in
         rec {
           checks = packages;
-          packages.dvb-api = package;
-          defaultPackage = package;
-          overlay = (final: prev: {
+          packages = {
             dvb-api = package;
-          });
+            default = package;
+          };
         }
       ) // {
+      overlays.default = final: prev: {
+        inherit (self.packages.${prev.system})
+          dvb-api;
+      };
       hydraJobs =
         let
           hydraSystems = [
