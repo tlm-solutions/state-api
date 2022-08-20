@@ -18,18 +18,9 @@ pub struct Error {
 
 // /static/{region}/coordinates
 pub async fn coordinates(
-    region: web::Path<String>,
+    region: web::Path<i32>,
     request: web::Json<CoordinatesStation>,
 ) -> impl Responder {
-    // TODO: add the correct mapping
-    let region_lookup: HashMap<&str, u32> = HashMap::from([
-        ("dresden", 0),
-        ("chemnitz", 1),
-        ("karlsruhe", 2),
-        ("berlin", 3),
-    ]);
-
-    let region_id;
     let default_stops = String::from("../stops.json");
     let stops_file = env::var("STOPS_FILE").unwrap_or(default_stops);
 
@@ -38,18 +29,7 @@ pub async fn coordinates(
     let stops: HashMap<u32, HashMap<u32, TransmissionPosition>> =
         serde_json::from_str(&data).expect("Unable to parse");
 
-    match region_lookup.get(&*region.as_str()) {
-        Some(id) => {
-            region_id = id;
-        }
-        None => {
-            return web::Json(Err(Error {
-                error_message: String::from("Invalid Region ID"),
-            }));
-        }
-    };
-
-    match stops.get(&region_id) {
+    match stops.get(&region) {
         Some(station_look_up) => match station_look_up.get(&request.station_id) {
             Some(stop) => web::Json(Ok(stop.clone())),
             None => {

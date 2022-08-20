@@ -6,7 +6,7 @@ mod state;
 pub use api::{coordinates, expected_time, get_network, query_vehicle};
 pub use state::{Network, State, Tram};
 
-use telegrams::{
+use dump_dvb::telegrams::r09::{
     R09GrpcTelegram,
     ReturnCode,
     ReceivesTelegrams,

@@ -4,7 +4,7 @@ mod graph;
 
 use graph::Graph;
 
-use telegrams::{R09GrpcTelegram};
+use dump_dvb::telegrams::r09::{R09GrpcTelegram};
 use stop_names::{InterRegional, Region, RegionMetaInformation};
 
 use serde::{Deserialize, Serialize};
@@ -62,36 +62,36 @@ impl Network {
         }
 
         let new_tram = Tram {
-            junction: telegram.junction,
-            line: telegram.line.unwrap(),
-            run_number: telegram.run_number.unwrap(),
+            junction: telegram.junction as u32,
+            line: telegram.line.unwrap() as u32,
+            run_number: telegram.run_number.unwrap() as u32,
             time_stamp: telegram.time,
             delayed: telegram.delay.unwrap(),
-            direction: telegram.direction,
+            direction: telegram.direction as u32,
         };
 
-        match self.positions.get_mut(&telegram.junction) {
+        match self.positions.get_mut(&new_tram.junction) {
             Some(trams) => {
                 trams.push(new_tram.clone());
             }
             None => {
                 self.positions
-                    .insert(telegram.junction, vec![new_tram.clone()]);
+                    .insert(new_tram.junction, vec![new_tram.clone()]);
             }
         }
 
         let mut _start_time: u64;
         let mut remove_index = 0;
-        match self.lines.get(&telegram.line.unwrap()) {
+        match self.lines.get(&new_tram.line) {
             Some(_) => {
                 {
                     //TODO the fucking unwrap
-                    let data = self.lines.get_mut(&telegram.line.unwrap()).unwrap();
-                    data.insert(telegram.run_number.unwrap(), new_tram.clone());
+                    let data = self.lines.get_mut(&new_tram.line).unwrap();
+                    data.insert(new_tram.run_number, new_tram.clone());
                 }
 
                 let mut previous = None;
-                let possible_starts: Vec<u32> = self.graph.adjacent_paths(telegram.junction);
+                let possible_starts: Vec<u32> = self.graph.adjacent_paths(new_tram.junction);
                 for start in possible_starts {
                     // we now look up if there is a tram started from this position
 
@@ -111,14 +111,14 @@ impl Network {
                 if previous.is_some() {
                     let unwrapped = previous.unwrap();
                     //let new_time = self.lines.get(&telegram.line).unwrap().get(&telegram.run_number).unwrap().time_stamp;
-                    let delta = telegram.time - unwrapped.time_stamp;
+                    let delta = new_tram.time_stamp - unwrapped.time_stamp;
                     println!(
                         "Tram: Line: {} Run Number: {} followed path: {} -- {} -> {} Time: {}",
                         unwrapped.line,
                         unwrapped.run_number,
                         unwrapped.junction,
                         unwrapped.direction,
-                        telegram.junction,
+                        new_tram.junction,
                         delta
                     );
 
@@ -132,8 +132,8 @@ impl Network {
             }
             None => {
                 self.lines.insert(
-                    telegram.line.unwrap(),
-                    HashMap::from([(telegram.run_number.unwrap(), new_tram)]),
+                    new_tram.line,
+                    HashMap::from([(new_tram.run_number, new_tram)]),
                 );
             }
         }
@@ -141,7 +141,7 @@ impl Network {
 }
 
 pub struct State {
-    pub regions: HashMap<String, Network>,
+    pub regions: HashMap<i32, Network>,
 }
 
 impl State {
@@ -150,7 +150,7 @@ impl State {
         let graph_file = env::var("GRAPH_FILE").unwrap_or(default_graph_file);
 
         let data = fs::read_to_string(graph_file).expect("Unable to read file");
-        let res: HashMap<String, Graph> = serde_json::from_str(&data).unwrap();
+        let res: HashMap<i32, Graph> = serde_json::from_str(&data).unwrap();
         let mut regions = HashMap::new();
 
         for (key, value) in res {

@@ -14,10 +14,10 @@ impl Graph {
         let mut data = String::new();
         file.read_to_string(&mut data).unwrap();
 
-        let json: HashMap<u32, HashMap<u32, u32>> =
+        let json: Graph =
             serde_json::from_str(&data).expect("JSON was not well-formatted");
 
-        Graph { structure: json }
+        json
     }
 
     pub fn adjacent_paths(&self, position: u32) -> Vec<u32> {

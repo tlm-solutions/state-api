@@ -61,10 +61,10 @@ pub async fn name_to_id(name: &String) -> Option<u64> {
 // GET /vehicles/dresden/all
 pub async fn get_network(
     state: web::Data<Arc<RwLock<State>>>,
-    region: web::Path<String>,
+    region: web::Path<i32>,
 ) -> impl Responder {
     //let unwrapped_region = region.into_inner();
-    println!("Received Request with {}", region.as_str());
+    println!("Received Request with {}", &region);
 
     /*let region_id;
     match name_to_id(&region).await {
@@ -77,7 +77,7 @@ pub async fn get_network(
     }*/
 
     let data = state.read().unwrap();
-    match data.regions.get(region.as_str()) {
+    match data.regions.get(&region) {
         Some(region) => {
             let start = SystemTime::now();
             let since_the_epoch = start
@@ -105,14 +105,14 @@ pub async fn get_network(
 // POST /vehicles/dresden/query
 pub async fn query_vehicle(
     state: web::Data<Arc<RwLock<State>>>,
-    region: web::Path<String>,
+    region: web::Path<i32>,
     request: web::Json<RequestVehicleInformation>,
 ) -> impl Responder {
     //let unwrapped_region = region.into_inner();
-    println!("Received Request with {}", region.as_str());
+    println!("Received Request with {}", &region);
 
     let data = state.read().unwrap();
-    match data.regions.get(region.as_str()) {
+    match data.regions.get(&region) {
         Some(region) => {
             if region.lines.contains_key(&request.line)
                 && region
@@ -142,12 +142,12 @@ pub async fn query_vehicle(
 // POST /network/dresden/estimated_travel_time
 pub async fn expected_time(
     state: web::Data<Arc<RwLock<State>>>,
-    region: web::Path<String>,
+    region: web::Path<i32>,
     request: web::Json<RequestInformationTime>,
 ) -> impl Responder {
 
     let data = state.read().unwrap();
-    match data.regions.get(region.as_str()) {
+    match data.regions.get(&region) {
         Some(region) => match region.edges.get(&(request.junction, request.direction)) {
             Some(time_found) => {
                 let destination = region
