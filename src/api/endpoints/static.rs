@@ -29,7 +29,7 @@ pub async fn coordinates(
     let stops: HashMap<u32, HashMap<u32, TransmissionPosition>> =
         serde_json::from_str(&data).expect("Unable to parse");
 
-    match stops.get(&region) {
+    match stops.get(&(*region as u32)) {
         Some(station_look_up) => match station_look_up.get(&request.station_id) {
             Some(stop) => web::Json(Ok(stop.clone())),
             None => {
