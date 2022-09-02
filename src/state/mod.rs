@@ -5,7 +5,6 @@ mod graph;
 use graph::Graph;
 
 use dump_dvb::telegrams::r09::{R09GrpcTelegram};
-use stop_names::{InterRegional, Region, RegionMetaInformation};
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;

@@ -44,20 +44,6 @@ pub struct RequiredTime {
     destination: u32,
 }
 
-pub async fn name_to_id(name: &String) -> Option<u64> {
-    let region_lookup: HashMap<&str, u64> = HashMap::from([
-        ("dresden", 0),
-        ("chemnitz", 1),
-        ("karlsruhe", 2),
-        ("berlin", 3),
-    ]);
-
-    match region_lookup.get(name.as_str()) {
-        Some(val) => Some(*val),
-        None => None,
-    }
-}
-
 // GET /vehicles/dresden/all
 pub async fn get_network(
     state: web::Data<Arc<RwLock<State>>>,
@@ -65,16 +51,6 @@ pub async fn get_network(
 ) -> impl Responder {
     //let unwrapped_region = region.into_inner();
     println!("Received Request with {}", &region);
-
-    /*let region_id;
-    match name_to_id(&region).await {
-        Some(region) => {
-            region_id = region;
-        }
-        None => {
-            return HttpResponse::BadRequest().finish();
-        }
-    }*/
 
     let data = state.read().unwrap();
     match data.regions.get(&region) {

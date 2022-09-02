@@ -12,11 +12,8 @@ use dump_dvb::telegrams::r09::{
     ReceivesTelegrams,
     ReceivesTelegramsServer
 };
-use stop_names::{TransmissionPosition, InterRegional};
 
-use std::collections::HashMap;
 use std::env;
-use std::fs;
 use std::sync::{Arc, RwLock};
 use std::thread;
 
