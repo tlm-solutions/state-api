@@ -26,6 +26,7 @@ tokio-util = { version = "0.7", features=["compat"] }
 futures = "0.3"
 futures-io = "0.3"
 futures-util = "*"
+log = "*"
 
 [build-dependencies]
 tonic-build = "0.7"

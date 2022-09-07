@@ -859,6 +859,7 @@ dependencies = [
  "futures",
  "futures-io",
  "futures-util",
+ "log",
  "prost",
  "serde",
  "serde_json",

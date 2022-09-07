@@ -5,11 +5,13 @@ mod graph;
 use graph::Graph;
 
 use dump_dvb::telegrams::r09::{R09GrpcTelegram};
+use dump_dvb::locations::RequestStatus;
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::env;
 use std::fs;
+use log::error;
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct Tram {
@@ -19,6 +21,7 @@ pub struct Tram {
     pub time_stamp: u64,
     pub delayed: i32,
     pub direction: u32,
+    pub request_status: RequestStatus
 }
 
 #[derive(Serialize, Debug, Clone)]
@@ -60,6 +63,14 @@ impl Network {
             return;
         }
 
+        let request_status = match RequestStatus::from_i16(telegram.request_status as i16) {
+            Some(status) => { status }
+            None => {
+                error!("request status decodation failed");
+                return;
+            }
+        };
+
         let new_tram = Tram {
             junction: telegram.junction as u32,
             line: telegram.line.unwrap() as u32,
@@ -67,6 +78,7 @@ impl Network {
             time_stamp: telegram.time,
             delayed: telegram.delay.unwrap(),
             direction: telegram.direction as u32,
+            request_status: request_status
         };
 
         match self.positions.get_mut(&new_tram.junction) {
