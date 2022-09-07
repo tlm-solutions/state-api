@@ -1,4 +1,4 @@
-use stop_names::TransmissionPosition;
+use dump_dvb::locations::TransmissionPosition;
 
 use actix_web::{web, Responder};
 use serde::{Deserialize, Serialize};
