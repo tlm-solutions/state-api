@@ -8,6 +8,8 @@ use dump_dvb::telegrams::r09::{R09GrpcTelegram};
 use dump_dvb::locations::RequestStatus;
 
 use serde::{Deserialize, Serialize};
+use log::info;
+
 use std::collections::HashMap;
 use std::env;
 use std::fs;
@@ -123,7 +125,7 @@ impl Network {
                     let unwrapped = previous.unwrap();
                     //let new_time = self.lines.get(&telegram.line).unwrap().get(&telegram.run_number).unwrap().time_stamp;
                     let delta = new_tram.time_stamp - unwrapped.time_stamp;
-                    println!(
+                    info!(
                         "Tram: Line: {} Run Number: {} followed path: {} -- {} -> {} Time: {}",
                         unwrapped.line,
                         unwrapped.run_number,

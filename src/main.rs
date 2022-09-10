@@ -20,6 +20,7 @@ use std::thread;
 use actix_cors::Cors;
 use actix_web::{web, App, HttpServer};
 use tonic::{transport::Server, Request, Response, Status};
+use log::{info, debug};
 
 #[derive(Clone)]
 pub struct TelegramProcessor {
@@ -31,7 +32,7 @@ impl TelegramProcessor {
         let default_stops = String::from("../stops.json");
         let stops_file = env::var("STOPS_FILE").unwrap_or(default_stops);
 
-        println!("Reading File: {}", &stops_file);
+        debug!("Reading File: {}", &stops_file);
         TelegramProcessor {
             state: state,
         }
@@ -80,7 +81,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let state_copy = Arc::clone(&state);
 
     thread::spawn(move || {
-        println!("Opening Http Sever ...");
+        info!("Opening Http Sever ...");
         let data = web::Data::new(state_copy);
         let rt = tokio::runtime::Runtime::new().unwrap();
 

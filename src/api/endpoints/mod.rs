@@ -6,6 +6,8 @@ use super::{State, Tram};
 
 use actix_web::{http::header, web, HttpResponse, Responder};
 use serde::{Deserialize, Serialize};
+use log::info;
+
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -50,7 +52,7 @@ pub async fn get_network(
     region: web::Path<i32>,
 ) -> impl Responder {
     //let unwrapped_region = region.into_inner();
-    println!("Received Request with {}", &region);
+    info!("Received Request with {}", &region);
 
     let data = state.read().unwrap();
     match data.regions.get(&region) {
@@ -85,7 +87,7 @@ pub async fn query_vehicle(
     request: web::Json<RequestVehicleInformation>,
 ) -> impl Responder {
     //let unwrapped_region = region.into_inner();
-    println!("Received Request with {}", &region);
+    info!("Received Request with {}", &region);
 
     let data = state.read().unwrap();
     match data.regions.get(&region) {

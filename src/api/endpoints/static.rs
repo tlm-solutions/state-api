@@ -2,6 +2,8 @@ use dump_dvb::locations::TransmissionPosition;
 
 use actix_web::{web, Responder};
 use serde::{Deserialize, Serialize};
+use log::info;
+
 use std::collections::HashMap;
 use std::env;
 use std::fs;
@@ -24,7 +26,7 @@ pub async fn coordinates(
     let default_stops = String::from("../stops.json");
     let stops_file = env::var("STOPS_FILE").unwrap_or(default_stops);
 
-    println!("Reading File: {}", &stops_file);
+    info!("Reading File: {}", &stops_file);
     let data = fs::read_to_string(stops_file).expect("Unable to read file");
     let stops: HashMap<u32, HashMap<u32, TransmissionPosition>> =
         serde_json::from_str(&data).expect("Unable to parse");
