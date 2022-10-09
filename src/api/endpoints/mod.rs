@@ -4,9 +4,12 @@ pub use r#static::coordinates;
 
 use super::{State, Tram};
 
+use dump_dvb::locations::{LineSegment, Segments};
+
 use actix_web::{http::header, web, HttpResponse, Responder};
 use serde::{Deserialize, Serialize};
-use log::info;
+use log::{info, debug};
+use chrono::NaiveDateTime;
 
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
@@ -29,15 +32,16 @@ pub struct EntireNetworkResponse {
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct RequestInformationTime {
-    junction: u32,
-    direction: u32,
+pub struct SegmentInformation {
+    pub start: NaiveDateTime,
+    pub historical_time: u32,
+    pub positions: Vec<(f64, f64)>
 }
 
 #[derive(Serialize, Deserialize)]
 pub struct RequestVehicleInformation {
     line: u32,
-    run_number: u32,
+    run: u32,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -97,7 +101,7 @@ pub async fn query_vehicle(
                     .lines
                     .get(&request.line)
                     .unwrap()
-                    .contains_key(&request.run_number)
+                    .contains_key(&request.run)
             {
                 HttpResponse::Ok()
                     .insert_header(header::ContentType::json())
@@ -106,7 +110,7 @@ pub async fn query_vehicle(
                             .lines
                             .get(&request.line)
                             .unwrap()
-                            .get(&request.run_number)
+                            .get(&request.run)
                             .unwrap(),
                     )
             } else {
@@ -117,32 +121,58 @@ pub async fn query_vehicle(
     }
 }
 
-// POST /network/dresden/estimated_travel_time
-pub async fn expected_time(
+// POST /network/dresden/get
+pub async fn get_vehicle(
     state: web::Data<Arc<RwLock<State>>>,
     region: web::Path<i32>,
-    request: web::Json<RequestInformationTime>,
+    request: web::Json<RequestVehicleInformation>,
 ) -> impl Responder {
 
     let data = state.read().unwrap();
+
     match data.regions.get(&region) {
-        Some(region) => match region.edges.get(&(request.junction, request.direction)) {
-            Some(time_found) => {
-                let destination = region
-                    .graph
-                    .structure
-                    .get(&request.junction)
-                    .unwrap()
-                    .get(&request.direction)
-                    .unwrap();
-                HttpResponse::Ok()
-                    .insert_header(header::ContentType::json())
-                    .json(RequiredTime {
-                        historical_time: *time_found,
-                        destination: *destination,
-                    })
+        Some(region) => {
+            // found network for requested city
+            //
+            let tram = match region.lines.get(&request.line) {
+                Some(runs) => {
+                    match runs.get(&request.run) {
+                        Some(vehicle) => vehicle,
+                        None => { 
+                            return HttpResponse::BadRequest().finish();
+                        }
+                    }
+                },
+                None => {
+                    return HttpResponse::BadRequest().finish();
+                }
+            };
+
+            match region.model.get(&tram.reporting_point) {
+                Some(report_location) => {
+                    match serde_json::value::from_value::<Segments>(report_location.properties.clone()) {
+                        Ok(value) => {
+                            match value.segments.get(&tram.direction) {
+                                Some(segment) => {
+                                    HttpResponse::Ok()
+                                        .insert_header(header::ContentType::json())
+                                        .json(segment)
+                                }
+                                None => {
+                                    return HttpResponse::BadRequest().finish();
+                                }
+                            }
+                        }
+                        Err(_) => {
+                            debug!("couldn't find segment in extra properties");
+                            return HttpResponse::BadRequest().finish();
+                        }
+                    }
+                }
+                None => {
+                    return HttpResponse::BadRequest().finish();
+                }
             }
-            None => HttpResponse::BadRequest().finish(),
         },
         None => HttpResponse::BadRequest().finish(),
     }

@@ -2,10 +2,11 @@ extern crate serde_json;
 
 mod graph;
 
+use chrono::{NaiveDateTime, Utc};
 use graph::Graph;
 
-use dump_dvb::telegrams::r09::{R09GrpcTelegram};
-use dump_dvb::locations::RequestStatus;
+use dump_dvb::telegrams::r09::R09GrpcTelegram;
+use dump_dvb::locations::{RequestStatus, LocationsJson, RegionReportLocations, LineSegment, Segments};
 
 use serde::{Deserialize, Serialize};
 use log::info;
@@ -17,7 +18,8 @@ use log::error;
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct Tram {
-    pub junction: u32, // germany wide or local ones
+    pub last_update: NaiveDateTime,
+    pub reporting_point: i32, // germany wide or local ones
     pub line: u32,
     pub run_number: u32,
     pub time_stamp: u64,
@@ -29,32 +31,30 @@ pub struct Tram {
 #[derive(Serialize, Debug, Clone)]
 pub struct Network {
     pub lines: HashMap<u32, HashMap<u32, Tram>>,
-    pub positions: HashMap<u32, Vec<Tram>>,
-    pub edges: HashMap<(u32, u32), u32>,
-    pub graph: Graph,
+    pub positions: HashMap<i32, Vec<Tram>>,
+    pub model: RegionReportLocations,
 }
 
 impl Network {
-    pub fn new(graph: Graph) -> Network {
+    pub fn new(model: RegionReportLocations) -> Network {
         Network {
             lines: HashMap::new(),
-            graph: graph,
             positions: HashMap::new(),
-            edges: HashMap::new(),
+            model,
         }
     }
 
-    pub fn query_tram(&self, line: &u32, run_number: &u32) -> Option<u32> {
+    pub fn query_tram(&self, line: &u32, run_number: &u32) -> Option<i32> {
         match self.lines.get(line) {
             Some(line) => line
                 .get(run_number)
-                .map_or(None, |tram| Some(tram.junction)),
+                .map_or(None, |tram| Some(tram.reporting_point)),
             None => None,
         }
     }
 
-    pub fn query_position(&mut self, position: &u32) -> Vec<Tram> {
-        match self.positions.get(position) {
+    pub fn query_position(&mut self, reporting_point: &i32) -> Vec<Tram> {
+        match self.positions.get(reporting_point) {
             Some(trams) => trams.to_vec(),
             None => Vec::new(),
         }
@@ -74,7 +74,8 @@ impl Network {
         };
 
         let new_tram = Tram {
-            junction: telegram.junction as u32,
+            last_update: Utc::now().naive_utc(),
+            reporting_point: telegram.reporting_point,
             line: telegram.line.unwrap() as u32,
             run_number: telegram.run_number.unwrap() as u32,
             time_stamp: telegram.time,
@@ -83,71 +84,13 @@ impl Network {
             request_status: request_status
         };
 
-        match self.positions.get_mut(&new_tram.junction) {
+        match self.positions.get_mut(&new_tram.reporting_point) {
             Some(trams) => {
                 trams.push(new_tram.clone());
             }
             None => {
                 self.positions
-                    .insert(new_tram.junction, vec![new_tram.clone()]);
-            }
-        }
-
-        let mut _start_time: u64;
-        let mut remove_index = 0;
-        match self.lines.get(&new_tram.line) {
-            Some(_) => {
-                {
-                    //TODO the fucking unwrap
-                    let data = self.lines.get_mut(&new_tram.line).unwrap();
-                    data.insert(new_tram.run_number, new_tram.clone());
-                }
-
-                let mut previous = None;
-                let possible_starts: Vec<u32> = self.graph.adjacent_paths(new_tram.junction);
-                for start in possible_starts {
-                    // we now look up if there is a tram started from this position
-
-                    let trams = self.query_position(&start);
-                    for (i, found_tram) in trams.iter().enumerate() {
-                        if found_tram.line == new_tram.line
-                            && found_tram.run_number == new_tram.run_number
-                        {
-                            // maybe add destination here
-                            previous = Some(found_tram.clone());
-                            remove_index = i;
-                            break;
-                        }
-                    }
-                }
-
-                if previous.is_some() {
-                    let unwrapped = previous.unwrap();
-                    //let new_time = self.lines.get(&telegram.line).unwrap().get(&telegram.run_number).unwrap().time_stamp;
-                    let delta = new_tram.time_stamp - unwrapped.time_stamp;
-                    info!(
-                        "Tram: Line: {} Run Number: {} followed path: {} -- {} -> {} Time: {}",
-                        unwrapped.line,
-                        unwrapped.run_number,
-                        unwrapped.junction,
-                        unwrapped.direction,
-                        new_tram.junction,
-                        delta
-                    );
-
-                    self.positions
-                        .get_mut(&unwrapped.junction)
-                        .unwrap()
-                        .remove(remove_index);
-                    self.edges
-                        .insert((unwrapped.junction, unwrapped.direction), delta as u32);
-                }
-            }
-            None => {
-                self.lines.insert(
-                    new_tram.line,
-                    HashMap::from([(new_tram.run_number, new_tram)]),
-                );
+                    .insert(new_tram.reporting_point, vec![new_tram.clone()]);
             }
         }
     }
@@ -159,17 +102,17 @@ pub struct State {
 
 impl State {
     pub fn new() -> State {
-        let default_graph_file = String::from("graph.json");
-        let graph_file = env::var("GRAPH_FILE").unwrap_or(default_graph_file);
+        let default_graph_file = String::from("all.json");
+        let graph_file = env::var("STOPS_JSON").unwrap_or(default_graph_file);
 
         let data = fs::read_to_string(graph_file).expect("Unable to read file");
-        let res: HashMap<i32, Graph> = serde_json::from_str(&data).unwrap();
+        let res: HashMap<i32, RegionReportLocations> = serde_json::from_str(&data).unwrap();
         let mut regions = HashMap::new();
 
         for (key, value) in res {
             regions.insert(key, Network::new(value));
         }
 
-        State { regions: regions }
+        State { regions }
     }
 }

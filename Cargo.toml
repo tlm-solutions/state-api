@@ -10,23 +10,23 @@ dump-dvb = { version = "0.4", git = "https://github.com/dump-dvb/dump-dvb.rs" }
 
 tonic = "0.7"
 prost = "0.10"
-tokio = { version = "1.18", features = ["macros", "rt-multi-thread"] }
+tokio = { version = "*", features = ["macros", "rt-multi-thread"] }
 
 serde = { version = "*", features = ["derive"] }
 serde_json = "*"
 
 actix-web = "*"
 actix-rt = "*"
-actix-multipart = "0.4.0"
-actix-cors = "0.6.0-beta.4"
+actix-cors = "*"
 
 async-std = "*"
-asynchronous-codec = "0.6"
-tokio-util = { version = "0.7", features=["compat"] }
-futures = "0.3"
-futures-io = "0.3"
+asynchronous-codec = "*"
+tokio-util = { version = "*", features=["compat"] }
+futures = "*"
+futures-io = "*"
 futures-util = "*"
 log = "*"
+chrono = "*"
 
 [build-dependencies]
 tonic-build = "0.7"
