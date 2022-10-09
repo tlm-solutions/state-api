@@ -14,8 +14,7 @@ impl Graph {
         let mut data = String::new();
         file.read_to_string(&mut data).unwrap();
 
-        let json: Graph =
-            serde_json::from_str(&data).expect("JSON was not well-formatted");
+        let json: Graph = serde_json::from_str(&data).expect("JSON was not well-formatted");
 
         json
     }

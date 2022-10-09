@@ -3,14 +3,11 @@ extern crate serde_json;
 mod api;
 mod state;
 
-pub use api::{coordinates, get_vehicle, get_network, query_vehicle};
+pub use api::{coordinates, get_network, get_vehicle, query_vehicle};
 pub use state::{Network, State, Tram};
 
 use dump_dvb::telegrams::r09::{
-    R09GrpcTelegram,
-    ReturnCode,
-    ReceivesTelegrams,
-    ReceivesTelegramsServer
+    R09GrpcTelegram, ReceivesTelegrams, ReceivesTelegramsServer, ReturnCode,
 };
 
 use std::env;
@@ -19,8 +16,8 @@ use std::thread;
 
 use actix_cors::Cors;
 use actix_web::{web, App, HttpServer};
+use log::{debug, info};
 use tonic::{transport::Server, Request, Response, Status};
-use log::{info, debug};
 
 #[derive(Clone)]
 pub struct TelegramProcessor {
@@ -33,9 +30,7 @@ impl TelegramProcessor {
         let stops_file = env::var("STOPS_FILE").unwrap_or(default_stops);
 
         debug!("Reading File: {}", &stops_file);
-        TelegramProcessor {
-            state: state,
-        }
+        TelegramProcessor { state: state }
     }
 }
 
@@ -97,10 +92,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     .wrap(cors)
                     .route("/vehicles/{region}/all", web::get().to(get_network))
                     .route("/vehicles/{region}/query", web::post().to(query_vehicle))
-                    .route(
-                        "/vehicles/{region}/get",
-                        web::post().to(get_vehicle),
-                    )
+                    .route("/vehicles/{region}/get", web::post().to(get_vehicle))
                     .route("/static/{region}/coordinates", web::post().to(coordinates))
             })
             .bind((http_host, http_port))

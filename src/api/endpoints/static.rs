@@ -1,8 +1,8 @@
 use dump_dvb::locations::TransmissionPosition;
 
 use actix_web::{web, Responder};
-use serde::{Deserialize, Serialize};
 use log::info;
+use serde::{Deserialize, Serialize};
 
 use std::collections::HashMap;
 use std::env;
