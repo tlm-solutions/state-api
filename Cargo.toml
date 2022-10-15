@@ -27,6 +27,7 @@ futures-io = "*"
 futures-util = "*"
 log = "*"
 chrono = "*"
+utoipa = "*"
 
 [build-dependencies]
 tonic-build = "0.7"

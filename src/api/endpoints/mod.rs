@@ -11,43 +11,21 @@ use serde::{Deserialize, Serialize};
 use log::{info, debug};
 use chrono::NaiveDateTime;
 
+use utoipa::ToSchema;
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 use std::time::{SystemTime, UNIX_EPOCH};
 
-#[derive(Serialize, Deserialize)]
-pub struct NetworkRequest {
-    region: String,
-}
-
-#[derive(Serialize, Deserialize)]
-pub struct Error {
-    error_message: String,
-}
-
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, ToSchema)]
 pub struct EntireNetworkResponse {
     network: HashMap<u32, HashMap<u32, Tram>>,
     time_stamp: u64,
 }
 
-#[derive(Serialize, Deserialize)]
-pub struct SegmentInformation {
-    pub start: NaiveDateTime,
-    pub historical_time: u32,
-    pub positions: Vec<(f64, f64)>
-}
-
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, ToSchema)]
 pub struct RequestVehicleInformation {
     line: u32,
     run: u32,
-}
-
-#[derive(Serialize, Deserialize)]
-pub struct RequiredTime {
-    historical_time: u32,
-    destination: u32,
 }
 
 // GET /vehicles/dresden/all

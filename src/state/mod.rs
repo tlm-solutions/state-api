@@ -2,9 +2,6 @@ extern crate serde_json;
 
 mod graph;
 
-use chrono::{NaiveDateTime, Utc};
-use graph::Graph;
-
 use dump_dvb::locations::{
     LineSegment, LocationsJson, RegionReportLocations, RequestStatus, Segments,
 };
@@ -12,13 +9,16 @@ use dump_dvb::telegrams::r09::R09GrpcTelegram;
 
 use log::info;
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
+use chrono::{Utc, NaiveDateTime};
 
 use log::error;
 use std::collections::HashMap;
 use std::env;
 use std::fs;
 
-#[derive(Deserialize, Serialize, Debug, Clone)]
+/// All the relevat information about a tram is contained in this model
+#[derive(Deserialize, Serialize, ToSchema, Debug, Clone)]
 pub struct Tram {
     pub last_update: NaiveDateTime,
     pub reporting_point: i32, // germany wide or local ones
