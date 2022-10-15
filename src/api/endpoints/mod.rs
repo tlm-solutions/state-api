@@ -7,9 +7,9 @@ use super::{State, Tram};
 use dump_dvb::locations::{LineSegment, Segments};
 
 use actix_web::{http::header, web, HttpResponse, Responder};
-use chrono::NaiveDateTime;
-use log::{debug, info};
 use serde::{Deserialize, Serialize};
+use log::{info, debug};
+use chrono::NaiveDateTime;
 
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
@@ -35,7 +35,7 @@ pub struct EntireNetworkResponse {
 pub struct SegmentInformation {
     pub start: NaiveDateTime,
     pub historical_time: u32,
-    pub positions: Vec<(f64, f64)>,
+    pub positions: Vec<(f64, f64)>
 }
 
 #[derive(Serialize, Deserialize)]
@@ -127,6 +127,7 @@ pub async fn get_vehicle(
     region: web::Path<i32>,
     request: web::Json<RequestVehicleInformation>,
 ) -> impl Responder {
+
     let data = state.read().unwrap();
 
     match data.regions.get(&region) {
@@ -134,10 +135,12 @@ pub async fn get_vehicle(
             // found network for requested city
             //
             let tram = match region.lines.get(&request.line) {
-                Some(runs) => match runs.get(&request.run) {
-                    Some(vehicle) => vehicle,
-                    None => {
-                        return HttpResponse::BadRequest().finish();
+                Some(runs) => {
+                    match runs.get(&request.run) {
+                        Some(vehicle) => vehicle,
+                        None => { 
+                            return HttpResponse::BadRequest().finish();
+                        }
                     }
                 },
                 None => {
@@ -147,17 +150,19 @@ pub async fn get_vehicle(
 
             match region.model.get(&tram.reporting_point) {
                 Some(report_location) => {
-                    match serde_json::value::from_value::<Segments>(
-                        report_location.properties.clone(),
-                    ) {
-                        Ok(value) => match value.segments.get(&tram.direction) {
-                            Some(segment) => HttpResponse::Ok()
-                                .insert_header(header::ContentType::json())
-                                .json(segment),
-                            None => {
-                                return HttpResponse::BadRequest().finish();
+                    match serde_json::value::from_value::<Segments>(report_location.properties.clone()) {
+                        Ok(value) => {
+                            match value.segments.get(&tram.direction) {
+                                Some(segment) => {
+                                    HttpResponse::Ok()
+                                        .insert_header(header::ContentType::json())
+                                        .json(segment)
+                                }
+                                None => {
+                                    return HttpResponse::BadRequest().finish();
+                                }
                             }
-                        },
+                        }
                         Err(_) => {
                             debug!("couldn't find segment in extra properties");
                             return HttpResponse::BadRequest().finish();
@@ -168,7 +173,7 @@ pub async fn get_vehicle(
                     return HttpResponse::BadRequest().finish();
                 }
             }
-        }
+        },
         None => HttpResponse::BadRequest().finish(),
     }
 }

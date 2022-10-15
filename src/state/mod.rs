@@ -105,7 +105,7 @@ pub struct State {
 impl State {
     pub fn new() -> State {
         let default_graph_file = String::from("all.json");
-        let graph_file = env::var("STOPS_JSON").unwrap_or(default_graph_file);
+        let graph_file = env::var("STOPS_FILE").unwrap_or(default_graph_file);
 
         let data = fs::read_to_string(graph_file).expect("Unable to read file");
         let res: HashMap<i32, RegionReportLocations> = serde_json::from_str(&data).unwrap();
