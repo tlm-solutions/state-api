@@ -108,10 +108,10 @@ impl State {
         let graph_file = env::var("STOPS_FILE").unwrap_or(default_graph_file);
 
         let data = fs::read_to_string(graph_file).expect("Unable to read file");
-        let res: HashMap<i32, RegionReportLocations> = serde_json::from_str(&data).unwrap();
+        let res: LocationsJson = serde_json::from_str(&data).unwrap();
         let mut regions = HashMap::new();
 
-        for (key, value) in res {
+        for (key, value) in res.data {
             regions.insert(key, Network::new(value));
         }
 
