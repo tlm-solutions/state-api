@@ -95,6 +95,22 @@ impl Network {
                     .insert(new_tram.reporting_point, vec![new_tram.clone()]);
             }
         }
+
+        match self.lines.get_mut(&new_tram.line) {
+            Some(runs) => {
+                match runs.get_mut(&new_tram.run_number) {
+                    Some(tram) => {
+                        *tram = new_tram;
+                    }
+                    None => {
+                        runs.insert(new_tram.run_number, new_tram);
+                    }
+                }
+            }
+            None => {
+                self.lines.insert(new_tram.line, HashMap::from([(new_tram.run_number, new_tram)]));
+            }
+        }
     }
 }
 

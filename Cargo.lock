@@ -872,7 +872,7 @@ checksum = "77c90badedccf4105eca100756a0b1289e191f6fcbdadd3cee1d2f614f97da8f"
 [[package]]
 name = "dump-dvb"
 version = "0.5.0"
-source = "git+https://github.com/dump-dvb/dump-dvb.rs#fbe3734dfe3453b8d197226564e46b3964da563e"
+source = "git+https://github.com/dump-dvb/dump-dvb.rs#5842a31d9e830afef35df786280916dd3c1e494a"
 dependencies = [
  "chrono",
  "csv",

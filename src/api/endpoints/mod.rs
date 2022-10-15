@@ -28,7 +28,16 @@ pub struct RequestVehicleInformation {
     run: u32,
 }
 
-// GET /vehicles/dresden/all
+
+/// this endpoint returnes last seen position 
+#[utoipa::path(
+    get,
+    path = "/vehicles/{region}/all",
+    responses(
+        (status = 200, description = "return all the vehicles in the requested region", body = EntireNetworkResponse),
+        (status = 500, description = "postgres pool error")
+    ),
+)]
 pub async fn get_network(
     state: web::Data<Arc<RwLock<State>>>,
     region: web::Path<i32>,
@@ -62,7 +71,15 @@ pub async fn get_network(
     }
 }
 
-// POST /vehicles/dresden/query
+/// this endpoint is for finding vehicles
+#[utoipa::path(
+    post,
+    path = "/vehicles/{region}/all",
+    responses(
+        (status = 200, description = "inforamtion about the requested tram or bus", body = RequestVehicleInformation),
+        (status = 500, description = "postgres pool error")
+    ),
+)]
 pub async fn query_vehicle(
     state: web::Data<Arc<RwLock<State>>>,
     region: web::Path<i32>,
@@ -99,7 +116,16 @@ pub async fn query_vehicle(
     }
 }
 
-// POST /network/dresden/get
+/// this endpoint returnes a list of interpolated gps positions and the average
+/// time that is needed to traverse them.
+#[utoipa::path(
+    post,
+    path = "/vehicles/{region}/position",
+    responses(
+        (status = 200, description = "information about the tram/bus the time and list of gps postions", body = RequestVehicleInformation),
+        (status = 500, description = "postgres pool error")
+    ),
+)]
 pub async fn get_vehicle(
     state: web::Data<Arc<RwLock<State>>>,
     region: web::Path<i32>,
