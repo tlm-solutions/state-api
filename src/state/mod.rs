@@ -3,11 +3,11 @@ extern crate serde_json;
 mod graph;
 
 use dump_dvb::locations::{
-    LineSegment, LocationsJson, RegionReportLocations, RequestStatus, Segments,
+    LocationsJson, RegionReportLocations, RequestStatus,
+    graph::{RegionGraph, PositionGraph}
 };
 use dump_dvb::telegrams::r09::R09GrpcTelegram;
 
-use log::info;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use chrono::{Utc, NaiveDateTime};
@@ -35,14 +35,16 @@ pub struct Network {
     pub lines: HashMap<u32, HashMap<u32, Tram>>,
     pub positions: HashMap<i32, Vec<Tram>>,
     pub model: RegionReportLocations,
+    pub graph: RegionGraph
 }
 
 impl Network {
-    pub fn new(model: RegionReportLocations) -> Network {
+    pub fn new(model: RegionReportLocations, graph: RegionGraph) -> Network {
         Network {
             lines: HashMap::new(),
             positions: HashMap::new(),
             model,
+            graph
         }
     }
 
@@ -120,15 +122,23 @@ pub struct State {
 
 impl State {
     pub fn new() -> State {
-        let default_graph_file = String::from("all.json");
-        let graph_file = env::var("STOPS_FILE").unwrap_or(default_graph_file);
+        let default_stop_file = String::from("all.json");
+        let stop_file = env::var("STOPS_FILE").unwrap_or(default_stop_file);
 
-        let data = fs::read_to_string(graph_file).expect("Unable to read file");
-        let res: LocationsJson = serde_json::from_str(&data).unwrap();
+        let default_graph_file = String::from("all.json");
+        let graph_file = env::var("GRAPH_FILE").unwrap_or(default_graph_file);
+
+        let stop_data = fs::read_to_string(stop_file).expect("Unable to read file");
+        let stop_json: LocationsJson = serde_json::from_str(&stop_data).unwrap();
+
+        let graph_data = fs::read_to_string(graph_file).expect("Unable to read file");
+        let graph_json: PositionGraph = serde_json::from_str(&graph_data).unwrap();
+
+
         let mut regions = HashMap::new();
 
-        for (key, value) in res.data {
-            regions.insert(key, Network::new(value));
+        for (key, value) in stop_json.data {
+            regions.insert(key, Network::new(value, graph_json.get(&key).unwrap().clone()));
         }
 
         State { regions }

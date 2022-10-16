@@ -1,22 +1,14 @@
 #!/usr/bin/env nix-shell
-#!nix-shell -i python3.9 -p "python39.withPackages(ps: with ps; [ websockets ])"
+#!nix-shell -i python3.9 -p "python39.withPackages(ps: with ps; [ websockets requests ])"
 
-import asyncio
-import json
-from websockets import connect
+import requests
 
-config = {
-    "regions": [0, 1],
-}
+all_vehicles = requests.get('https://api.staging.dvb.solutions/vehicles/0/all').json()["network"]
 
-raw_config = json.dumps(config);
 
-async def hello(uri):
-    async with connect(uri) as websocket:
-        await websocket.send(raw_config)
-        while True:
-            print(await websocket.recv())
-            #await websocket.pong()
+for line, runs in all_vehicles.items():
+    for run,tram in runs.items():
+        r = requests.post('https://api.staging.dvb.solutions/vehicles/0/get', json={"line": line, "run": run })
 
-asyncio.run(hello("wss://socket.staging.dvb.solutions"))
-#asyncio.run(hello("ws://127.0.0.1:9001"))
+        print(r)
+

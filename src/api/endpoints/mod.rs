@@ -1,15 +1,11 @@
-mod r#static;
-
-pub use r#static::coordinates;
+//mod r#static;
+//pub use r#static::coordinates;
 
 use super::{State, Tram};
-
-use dump_dvb::locations::{LineSegment, Segments};
 
 use actix_web::{http::header, web, HttpResponse, Responder};
 use serde::{Deserialize, Serialize};
 use log::{info, debug};
-use chrono::NaiveDateTime;
 
 use utoipa::ToSchema;
 use std::collections::HashMap;
@@ -126,7 +122,7 @@ pub async fn query_vehicle(
         (status = 500, description = "postgres pool error")
     ),
 )]
-pub async fn get_vehicle(
+pub async fn get_position(
     state: web::Data<Arc<RwLock<State>>>,
     region: web::Path<i32>,
     request: web::Json<RequestVehicleInformation>,
@@ -142,35 +138,26 @@ pub async fn get_vehicle(
                 Some(runs) => {
                     match runs.get(&request.run) {
                         Some(vehicle) => vehicle,
-                        None => { 
+                        None => {
+                            debug!("line {} found but not the run {}", request.line, request.run);
                             return HttpResponse::BadRequest().finish();
                         }
                     }
                 },
                 None => {
+                    debug!("line not found {}", request.run);
                     return HttpResponse::BadRequest().finish();
                 }
             };
 
-            match region.model.get(&tram.reporting_point) {
-                Some(report_location) => {
-                    match serde_json::value::from_value::<Segments>(report_location.properties.clone()) {
-                        Ok(value) => {
-                            match value.segments.get(&tram.direction) {
-                                Some(segment) => {
-                                    HttpResponse::Ok()
-                                        .insert_header(header::ContentType::json())
-                                        .json(segment)
-                                }
-                                None => {
-                                    return HttpResponse::BadRequest().finish();
-                                }
-                            }
-                        }
-                        Err(_) => {
-                            debug!("couldn't find segment in extra properties");
-                            return HttpResponse::BadRequest().finish();
-                        }
+            match region.graph.get(&tram.reporting_point) {
+                Some(value) => {
+                    if value.len() > 0 {
+                        HttpResponse::Ok()
+                            .insert_header(header::ContentType::json())
+                            .json(value[0].clone())
+                    } else {
+                        return HttpResponse::BadRequest().finish();
                     }
                 }
                 None => {

@@ -3,7 +3,7 @@ extern crate serde_json;
 mod api;
 mod state;
 
-pub use api::{coordinates, get_network, get_vehicle, query_vehicle};
+pub use api::endpoints::{get_network, get_position, query_vehicle};
 pub use state::{Network, State, Tram};
 
 use dump_dvb::telegrams::r09::{
@@ -92,8 +92,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     .wrap(cors)
                     .route("/vehicles/{region}/all", web::get().to(get_network))
                     .route("/vehicles/{region}/query", web::post().to(query_vehicle))
-                    .route("/vehicles/{region}/get", web::post().to(get_vehicle))
-                    .route("/static/{region}/coordinates", web::post().to(coordinates))
+                    .route("/vehicles/{region}/positions", web::post().to(get_position))
             })
             .bind((http_host, http_port))
             .unwrap()
