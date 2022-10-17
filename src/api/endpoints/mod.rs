@@ -157,10 +157,13 @@ pub async fn get_position(
                             .insert_header(header::ContentType::json())
                             .json(value[0].clone())
                     } else {
+
+                        debug!("no prediction");
                         return HttpResponse::BadRequest().finish();
                     }
                 }
                 None => {
+                    debug!("cannot find reporting point in graph {}", &tram.reporting_point);
                     return HttpResponse::BadRequest().finish();
                 }
             }

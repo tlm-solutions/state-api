@@ -92,7 +92,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     .wrap(cors)
                     .route("/vehicles/{region}/all", web::get().to(get_network))
                     .route("/vehicles/{region}/query", web::post().to(query_vehicle))
-                    .route("/vehicles/{region}/positions", web::post().to(get_position))
+                    .route("/vehicles/{region}/position", web::post().to(get_position))
             })
             .bind((http_host, http_port))
             .unwrap()

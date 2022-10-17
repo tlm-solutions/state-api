@@ -8,7 +8,7 @@ all_vehicles = requests.get('https://api.staging.dvb.solutions/vehicles/0/all').
 
 for line, runs in all_vehicles.items():
     for run,tram in runs.items():
-        r = requests.post('https://api.staging.dvb.solutions/vehicles/0/get', json={"line": line, "run": run })
+        r = requests.post('https://api.staging.dvb.solutions/vehicles/0/position', json={"line": line, "run": run })
 
         print(r)
 
