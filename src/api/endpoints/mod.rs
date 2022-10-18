@@ -160,7 +160,13 @@ pub async fn get_position(
             match region.graph.get(&tram.reporting_point) {
                 Some(value) => {
                     if value.len() > 0 {
-                        let index = value.iter().map(|x| x.positions.len()).max().unwrap();
+                        let index: usize = value
+                            .iter()
+                            .map(|x| x.positions.len())
+                            .enumerate()
+                            .max_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal))
+                            .map(|(index, _)| index)
+                            .unwrap();
 
                         let since_the_epoch = SystemTime::now()
                             .duration_since(UNIX_EPOCH)
