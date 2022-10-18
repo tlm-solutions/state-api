@@ -124,13 +124,13 @@ pub async fn query_vehicle(
 )]
 pub async fn get_position(
     state: web::Data<Arc<RwLock<State>>>,
-    region: web::Path<i32>,
+    region_id: web::Path<i32>,
     request: web::Json<RequestVehicleInformation>,
 ) -> impl Responder {
-
+    info!("request to get gps for {}", &region_id);
     let data = state.read().unwrap();
 
-    match data.regions.get(&region) {
+    match data.regions.get(&region_id) {
         Some(region) => {
             // found network for requested city
             //
@@ -168,6 +168,9 @@ pub async fn get_position(
                 }
             }
         },
-        None => HttpResponse::BadRequest().finish(),
+        None => {
+            debug!("cannot find region {} {:?}", region_id, data.regions.keys());
+            return HttpResponse::BadRequest().finish();
+        }
     }
 }
