@@ -24,6 +24,14 @@ pub struct RequestVehicleInformation {
     run: u32,
 }
 
+#[derive(Serialize, Deserialize)]
+pub struct LineSegmentWithTime {
+    pub last_update: u64,
+    pub historical_time: u32, // time in seconds
+    pub next_reporting_point: i32, // reporting_point
+    pub positions: Vec<(f64, f64)>
+}
+
 
 /// this endpoint returnes last seen position 
 #[utoipa::path(
@@ -152,9 +160,21 @@ pub async fn get_position(
             match region.graph.get(&tram.reporting_point) {
                 Some(value) => {
                     if value.len() > 0 {
+                        let index = value.iter().map(|x| x.positions.len()).max().unwrap();
+
+                        let since_the_epoch = SystemTime::now()
+                            .duration_since(UNIX_EPOCH)
+                            .expect("Time went backwards")
+                            .as_secs();
+
                         HttpResponse::Ok()
                             .insert_header(header::ContentType::json())
-                            .json(value[0].clone())
+                            .json(LineSegmentWithTime {
+                                last_update: since_the_epoch,
+                                historical_time: value[index].historical_time,
+                                next_reporting_point: value[index].next_reporting_point,
+                                positions: value[index].positions.clone()
+                            })
                     } else {
 
                         debug!("no prediction");
