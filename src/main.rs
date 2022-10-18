@@ -18,6 +18,7 @@ use actix_cors::Cors;
 use actix_web::{web, App, HttpServer};
 use log::{debug, info};
 use tonic::{transport::Server, Request, Response, Status};
+use env_logger;
 
 #[derive(Clone)]
 pub struct TelegramProcessor {
@@ -58,6 +59,8 @@ impl ReceivesTelegrams for TelegramProcessor {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+     env_logger::init();
+
     let default_grpc_port = String::from("127.0.0.1:50051");
     let grpc_port = env::var("GRPC_HOST").unwrap_or(default_grpc_port);
 
