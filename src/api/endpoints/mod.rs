@@ -133,7 +133,6 @@ pub async fn get_position(
     match data.regions.get(&region_id) {
         Some(region) => {
             // found network for requested city
-            //
             let tram = match region.lines.get(&request.line) {
                 Some(runs) => {
                     match runs.get(&request.run) {
