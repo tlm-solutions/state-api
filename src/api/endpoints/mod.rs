@@ -147,13 +147,13 @@ pub async fn get_position(
                         Some(vehicle) => vehicle,
                         None => {
                             debug!("line {} found but not the run {}", request.line, request.run);
-                            return HttpResponse::BadRequest().finish();
+                            return HttpResponse::NotFound().finish();
                         }
                     }
                 },
                 None => {
                     debug!("line not found {}", request.run);
-                    return HttpResponse::BadRequest().finish();
+                    return HttpResponse::NotFound().finish();
                 }
             };
 
@@ -182,20 +182,19 @@ pub async fn get_position(
                                 positions: value[index].positions.clone()
                             })
                     } else {
-
                         debug!("no prediction");
-                        return HttpResponse::BadRequest().finish();
+                        return HttpResponse::NotFound().finish();
                     }
                 }
                 None => {
                     debug!("cannot find reporting point in graph {}", &tram.reporting_point);
-                    return HttpResponse::BadRequest().finish();
+                    return HttpResponse::NotFound().finish();
                 }
             }
         },
         None => {
             debug!("cannot find region {} {:?}", region_id, data.regions.keys());
-            return HttpResponse::BadRequest().finish();
+            return HttpResponse::NotFound().finish();
         }
     }
 }
