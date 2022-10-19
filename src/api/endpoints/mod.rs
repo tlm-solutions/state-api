@@ -26,8 +26,8 @@ pub struct RequestVehicleInformation {
 
 #[derive(Serialize, Deserialize)]
 pub struct LineSegmentWithTime {
-    pub last_update: u64,
-    pub historical_time: u32, // time in seconds
+    pub last_update: u128,
+    pub historical_time: u32, // time in milliseconds 
     pub next_reporting_point: i32, // reporting_point
     pub positions: Vec<(f64, f64)>
 }
@@ -171,7 +171,7 @@ pub async fn get_position(
                         let since_the_epoch = SystemTime::now()
                             .duration_since(UNIX_EPOCH)
                             .expect("Time went backwards")
-                            .as_secs();
+                            .as_millis();
 
                         HttpResponse::Ok()
                             .insert_header(header::ContentType::json())
