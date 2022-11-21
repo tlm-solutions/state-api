@@ -61,6 +61,11 @@ impl ReceivesTelegrams for TelegramProcessor {
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
      env_logger::init();
 
+    let default_worker_count = "4".to_string();
+    let worker_count = (env::var("WORKER_COUNT").unwrap_or(default_worker_count))
+        .parse::<usize>()
+        .expect("cannot decode workers into integer");
+
     let default_grpc_port = String::from("127.0.0.1:50051");
     let grpc_port = env::var("GRPC_HOST").unwrap_or(default_grpc_port);
 
@@ -97,6 +102,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     .route("/vehicles/{region}/query", web::post().to(query_vehicle))
                     .route("/vehicles/{region}/position", web::post().to(get_position))
             })
+            .workers(worker_count)
             .bind((http_host, http_port))
             .unwrap()
             .run(),

@@ -1,7 +1,5 @@
 extern crate serde_json;
 
-mod graph;
-
 use dump_dvb::locations::{
     LocationsJson, RegionReportLocations, RequestStatus,
     graph::{RegionGraph, PositionGraph}
