@@ -11,6 +11,7 @@ use utoipa::ToSchema;
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 use std::time::{SystemTime, UNIX_EPOCH};
+use dump_dvb::locations::graph::Position;
 
 #[derive(Serialize, Deserialize, ToSchema)]
 pub struct EntireNetworkResponse {
@@ -29,7 +30,7 @@ pub struct LineSegmentWithTime {
     pub last_update: u128,
     pub historical_time: u32, // time in milliseconds 
     pub next_reporting_point: i32, // reporting_point
-    pub positions: Vec<(f64, f64)>
+    pub positions: HashMap<String, Position>
 }
 
 
