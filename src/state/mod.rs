@@ -1,14 +1,14 @@
 extern crate serde_json;
 
-use dump_dvb::locations::{
+use tlms::locations::{
+    graph::{PositionGraph, RegionGraph},
     LocationsJson, RegionReportLocations, RequestStatus,
-    graph::{RegionGraph, PositionGraph}
 };
-use dump_dvb::telegrams::r09::R09GrpcTelegram;
+use tlms::telegrams::r09::R09GrpcTelegram;
 
+use chrono::{NaiveDateTime, Utc};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
-use chrono::{Utc, NaiveDateTime};
 
 use log::error;
 use std::collections::HashMap;
@@ -33,7 +33,7 @@ pub struct Network {
     pub lines: HashMap<u32, HashMap<u32, Tram>>,
     pub positions: HashMap<i32, Vec<Tram>>,
     pub model: RegionReportLocations,
-    pub graph: RegionGraph
+    pub graph: RegionGraph,
 }
 
 impl Network {
@@ -42,7 +42,7 @@ impl Network {
             lines: HashMap::new(),
             positions: HashMap::new(),
             model,
-            graph
+            graph,
         }
     }
 
@@ -50,7 +50,7 @@ impl Network {
         match self.lines.get(line) {
             Some(line) => line
                 .get(run_number)
-                .map_or(None, |tram| Some(tram.reporting_point)),
+                .map(|tram| tram.reporting_point),
             None => None,
         }
     }
@@ -83,7 +83,7 @@ impl Network {
             time_stamp: telegram.time,
             delayed: telegram.delay.unwrap(),
             direction: telegram.direction as u32,
-            request_status: request_status,
+            request_status,
         };
 
         match self.positions.get_mut(&new_tram.reporting_point) {
@@ -97,25 +97,26 @@ impl Network {
         }
 
         match self.lines.get_mut(&new_tram.line) {
-            Some(runs) => {
-                match runs.get_mut(&new_tram.run_number) {
-                    Some(tram) => {
-                        *tram = new_tram;
-                    }
-                    None => {
-                        runs.insert(new_tram.run_number, new_tram);
-                    }
+            Some(runs) => match runs.get_mut(&new_tram.run_number) {
+                Some(tram) => {
+                    *tram = new_tram;
                 }
-            }
+                None => {
+                    runs.insert(new_tram.run_number, new_tram);
+                }
+            },
             None => {
-                self.lines.insert(new_tram.line, HashMap::from([(new_tram.run_number, new_tram)]));
+                self.lines.insert(
+                    new_tram.line,
+                    HashMap::from([(new_tram.run_number, new_tram)]),
+                );
             }
         }
     }
 }
 
 pub struct State {
-    pub regions: HashMap<i32, Network>,
+    pub regions: HashMap<i64, Network>,
 }
 
 impl State {
@@ -132,13 +133,21 @@ impl State {
         let graph_data = fs::read_to_string(graph_file).expect("Unable to read file");
         let graph_json: PositionGraph = serde_json::from_str(&graph_data).unwrap();
 
-
         let mut regions = HashMap::new();
 
         for (key, value) in stop_json.data {
-            regions.insert(key, Network::new(value, graph_json.get(&key).unwrap().clone()));
+            regions.insert(
+                key,
+                Network::new(value, graph_json.get(&key).unwrap().clone()),
+            );
         }
 
         State { regions }
+    }
+}
+
+impl Default for State {
+    fn default() -> Self {
+        Self::new()
     }
 }

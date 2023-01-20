@@ -1,7 +1,7 @@
 { naersk, src, lib, pkg-config, cmake, protobuf, postgresql, zlib }:
 
 naersk.buildPackage {
-  pname = "dvb-api";
+  pname = "state-api";
   version = "0.1.3";
 
   src = ./.;
@@ -12,6 +12,6 @@ naersk.buildPackage {
 
   meta = with lib; {
     description = "public api to fetch all the spicy live data";
-    homepage = "https://github.com/dump-dvb/dvb-api";
+    homepage = "https://github.com/tlm-solutions/state-api";
   };
 }

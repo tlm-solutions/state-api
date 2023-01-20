@@ -4,14 +4,14 @@
 use super::{State, Tram};
 
 use actix_web::{http::header, web, HttpResponse, Responder};
+use log::{debug, info};
 use serde::{Deserialize, Serialize};
-use log::{info, debug};
 
-use utoipa::ToSchema;
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 use std::time::{SystemTime, UNIX_EPOCH};
-use dump_dvb::locations::graph::Position;
+use tlms::locations::graph::Position;
+use utoipa::ToSchema;
 
 #[derive(Serialize, Deserialize, ToSchema)]
 pub struct EntireNetworkResponse {
@@ -28,13 +28,12 @@ pub struct RequestVehicleInformation {
 #[derive(Serialize, Deserialize)]
 pub struct LineSegmentWithTime {
     pub last_update: u128,
-    pub historical_time: u32, // time in milliseconds 
+    pub historical_time: u32,      // time in milliseconds
     pub next_reporting_point: i32, // reporting_point
-    pub positions: HashMap<String, Position>
+    pub positions: HashMap<String, Position>,
 }
 
-
-/// this endpoint returnes last seen position 
+/// this endpoint returnes last seen position
 #[utoipa::path(
     get,
     path = "/vehicles/{region}/all",
@@ -45,7 +44,7 @@ pub struct LineSegmentWithTime {
 )]
 pub async fn get_network(
     state: web::Data<Arc<RwLock<State>>>,
-    region: web::Path<i32>,
+    region: web::Path<i64>,
 ) -> impl Responder {
     //let unwrapped_region = region.into_inner();
     info!("Received Request with {}", &region);
@@ -87,7 +86,7 @@ pub async fn get_network(
 )]
 pub async fn query_vehicle(
     state: web::Data<Arc<RwLock<State>>>,
-    region: web::Path<i32>,
+    region: web::Path<i64>,
     request: web::Json<RequestVehicleInformation>,
 ) -> impl Responder {
     //let unwrapped_region = region.into_inner();
@@ -133,7 +132,7 @@ pub async fn query_vehicle(
 )]
 pub async fn get_position(
     state: web::Data<Arc<RwLock<State>>>,
-    region_id: web::Path<i32>,
+    region_id: web::Path<i64>,
     request: web::Json<RequestVehicleInformation>,
 ) -> impl Responder {
     info!("request to get gps for {}", &region_id);
@@ -143,13 +142,14 @@ pub async fn get_position(
         Some(region) => {
             // found network for requested city
             let tram = match region.lines.get(&request.line) {
-                Some(runs) => {
-                    match runs.get(&request.run) {
-                        Some(vehicle) => vehicle,
-                        None => {
-                            debug!("line {} found but not the run {}", request.line, request.run);
-                            return HttpResponse::NotFound().finish();
-                        }
+                Some(runs) => match runs.get(&request.run) {
+                    Some(vehicle) => vehicle,
+                    None => {
+                        debug!(
+                            "line {} found but not the run {}",
+                            request.line, request.run
+                        );
+                        return HttpResponse::NotFound().finish();
                     }
                 },
                 None => {
@@ -160,12 +160,14 @@ pub async fn get_position(
 
             match region.graph.get(&tram.reporting_point) {
                 Some(value) => {
-                    if value.len() > 0 {
+                    if !value.is_empty() {
                         let index: usize = value
                             .iter()
                             .map(|x| x.positions.len())
                             .enumerate()
-                            .max_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal))
+                            .max_by(|(_, a), (_, b)| {
+                                a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal)
+                            })
                             .map(|(index, _)| index)
                             .unwrap();
 
@@ -180,22 +182,25 @@ pub async fn get_position(
                                 last_update: since_the_epoch,
                                 historical_time: value[index].historical_time,
                                 next_reporting_point: value[index].next_reporting_point,
-                                positions: value[index].positions.clone()
+                                positions: value[index].positions.clone(),
                             })
                     } else {
                         debug!("no prediction");
-                        return HttpResponse::NotFound().finish();
+                        HttpResponse::NotFound().finish()
                     }
                 }
                 None => {
-                    debug!("cannot find reporting point in graph {}", &tram.reporting_point);
-                    return HttpResponse::NotFound().finish();
+                    debug!(
+                        "cannot find reporting point in graph {}",
+                        &tram.reporting_point
+                    );
+                    HttpResponse::NotFound().finish()
                 }
             }
-        },
+        }
         None => {
             debug!("cannot find region {} {:?}", region_id, data.regions.keys());
-            return HttpResponse::NotFound().finish();
+            HttpResponse::NotFound().finish()
         }
     }
 }

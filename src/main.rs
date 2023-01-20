@@ -6,7 +6,7 @@ mod state;
 pub use api::endpoints::{get_network, get_position, query_vehicle};
 pub use state::{Network, State, Tram};
 
-use dump_dvb::telegrams::r09::{
+use tlms::telegrams::r09::{
     R09GrpcTelegram, ReceivesTelegrams, ReceivesTelegramsServer, ReturnCode,
 };
 
@@ -16,9 +16,9 @@ use std::thread;
 
 use actix_cors::Cors;
 use actix_web::{web, App, HttpServer};
+use actix_web_prom::{PrometheusMetrics, PrometheusMetricsBuilder};
 use log::{debug, info};
 use tonic::{transport::Server, Request, Response, Status};
-use env_logger;
 
 #[derive(Clone)]
 pub struct TelegramProcessor {
@@ -31,7 +31,7 @@ impl TelegramProcessor {
         let stops_file = env::var("STOPS_FILE").unwrap_or(default_stops);
 
         debug!("Reading File: {}", &stops_file);
-        TelegramProcessor { state: state }
+        TelegramProcessor { state }
     }
 }
 
@@ -41,14 +41,12 @@ impl ReceivesTelegrams for TelegramProcessor {
         &self,
         request: Request<R09GrpcTelegram>,
     ) -> Result<Response<ReturnCode>, Status> {
-        let extracted = request.into_inner().clone();
+        let extracted = request.into_inner();
         {
             let unwrapped_state = &mut (*self.state.write().unwrap());
-            match unwrapped_state.regions.get_mut(&extracted.region) {
-                Some(network) => {
-                    network.update(&extracted);
-                }
-                None => {}
+
+            if let Some(network) = unwrapped_state.regions.get_mut(&extracted.region) {
+                network.update(&extracted);
             }
         }
 
@@ -57,9 +55,17 @@ impl ReceivesTelegrams for TelegramProcessor {
     }
 }
 
+pub fn get_prometheus() -> PrometheusMetrics {
+    PrometheusMetricsBuilder::new("api")
+        .endpoint("/metrics")
+        //.const_labels(None)
+        .build()
+        .unwrap()
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-     env_logger::init();
+    env_logger::init();
 
     let default_worker_count = "4".to_string();
     let worker_count = (env::var("WORKER_COUNT").unwrap_or(default_worker_count))
@@ -87,6 +93,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         info!("Opening Http Sever ...");
         let data = web::Data::new(state_copy);
         let rt = tokio::runtime::Runtime::new().unwrap();
+        let prometheus = get_prometheus();
 
         rt.block_on(
             HttpServer::new(move || {
@@ -98,6 +105,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 App::new()
                     .app_data(data.clone())
                     .wrap(cors)
+                    .wrap(prometheus.clone())
                     .route("/vehicles/{region}/all", web::get().to(get_network))
                     .route("/vehicles/{region}/query", web::post().to(query_vehicle))
                     .route("/vehicles/{region}/position", web::post().to(get_position))
