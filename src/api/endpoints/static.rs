@@ -1,4 +1,4 @@
-use dump_dvb::locations::TransmissionPosition;
+use tlms::locations::TransmissionPosition;
 
 use actix_web::{web, Responder};
 use log::info;

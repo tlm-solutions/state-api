@@ -25,14 +25,14 @@
         rec {
           checks = packages;
           packages = {
-            dvb-api = package;
+            state-api = package;
             default = package;
           };
         }
       ) // {
       overlays.default = final: prev: {
         inherit (self.packages.${prev.system})
-          dvb-api;
+          state-api;
       };
       hydraJobs =
         let
