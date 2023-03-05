@@ -37,6 +37,10 @@
         inherit (self.packages.${prev.system})
           state-api;
       };
+      nixosModules = rec {
+        default = state-api;
+        state-api = import ./nixos-module;
+      };
       hydraJobs =
         let
           hydraSystems = [
