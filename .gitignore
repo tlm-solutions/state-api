@@ -1,2 +1,5 @@
 target
 result
+.tmp
+.direnv
+.envrc
