@@ -1,12 +1,12 @@
 [package]
 name = "state-api"
-version = "0.1.4"
+version = "0.2.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-tlms = { version = "0.7", git = "https://github.com/tlm-solutions/tlms.rs", features = ["locations", "telegrams"] }
+tlms = { version = "0.8", git = "https://github.com/tlm-solutions/tlms.rs", tag = "v0.8.0", features = ["locations", "telegrams"] }
 
 tonic = "0.7"
 prost = "0.10"

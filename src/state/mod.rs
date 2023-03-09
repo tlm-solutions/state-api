@@ -48,9 +48,7 @@ impl Network {
 
     pub fn query_tram(&self, line: &u32, run_number: &u32) -> Option<i32> {
         match self.lines.get(line) {
-            Some(line) => line
-                .get(run_number)
-                .map(|tram| tram.reporting_point),
+            Some(line) => line.get(run_number).map(|tram| tram.reporting_point),
             None => None,
         }
     }
@@ -67,9 +65,9 @@ impl Network {
             return;
         }
 
-        let request_status = match RequestStatus::from_i16(telegram.request_status as i16) {
-            Some(status) => status,
-            None => {
+        let request_status: RequestStatus = match (telegram.request_status as i16).try_into() {
+            Ok(status) => status,
+            Err(_) => {
                 error!("request status decodation failed");
                 return;
             }
