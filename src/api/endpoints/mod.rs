@@ -70,8 +70,11 @@ pub async fn get_network(
                     network: region_copy,
                     time_stamp: since_the_epoch,
                 })
+        },
+        None => {
+            debug!("region not found !");
+            HttpResponse::BadRequest().finish()
         }
-        None => HttpResponse::BadRequest().finish(),
     }
 }
 
