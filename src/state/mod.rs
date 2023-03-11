@@ -134,7 +134,7 @@ impl State {
         let mut regions = HashMap::new();
 
         for (key, value) in stop_json.data {
-            info!("initializing region: {}", &key);
+            println!("initializing region: {}", &key);
             regions.insert(
                 key,
                 Network::new(value, graph_json.get(&key).unwrap().clone()),
