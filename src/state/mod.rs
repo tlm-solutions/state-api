@@ -10,7 +10,7 @@ use chrono::{NaiveDateTime, Utc};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
-use log::{error, debug};
+use log::{error, debug, info};
 use std::collections::HashMap;
 use std::env;
 use std::fs;
@@ -134,7 +134,7 @@ impl State {
         let mut regions = HashMap::new();
 
         for (key, value) in stop_json.data {
-            debug!("initializing region: {}", &key);
+            info!("initializing region: {}", &key);
             regions.insert(
                 key,
                 Network::new(value, graph_json.get(&key).unwrap().clone()),

@@ -72,7 +72,7 @@ pub async fn get_network(
                 })
         },
         None => {
-            debug!("region not found !");
+            info!("region not found !");
             HttpResponse::BadRequest().finish()
         }
     }
